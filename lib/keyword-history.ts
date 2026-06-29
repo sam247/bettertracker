@@ -17,3 +17,17 @@ export function buildPositionHistory(
   }
   return result;
 }
+
+export function buildBaselinePositions(
+  rows: { keywordId: string; position: number | null }[],
+): Record<string, number | null> {
+  const result: Record<string, number | null> = {};
+
+  for (const row of rows) {
+    if (!(row.keywordId in result)) {
+      result[row.keywordId] = row.position;
+    }
+  }
+
+  return result;
+}

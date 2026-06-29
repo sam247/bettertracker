@@ -7,6 +7,7 @@ import { ChangeCell } from "@/components/change-cell";
 import { FrequencyBadge } from "@/components/frequency-badge";
 import { KeywordDetailPanel } from "@/components/keyword-detail-panel";
 import { KeywordStatsBar } from "@/components/keyword-stats-bar";
+import { MovementGraph } from "@/components/movement-graph";
 import { PositionCell } from "@/components/position-cell";
 import { PositionSparkline } from "@/components/position-sparkline";
 import { RankingUrlCell } from "@/components/ranking-url-cell";
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatRelative, isDue } from "@/lib/dates";
-import { computeKeywordStats, getMovement } from "@/lib/keyword-stats";
+import { computeBaselineMovementStats, computeKeywordStats, getMovement } from "@/lib/keyword-stats";
 import { cn, urlPath } from "@/lib/utils";
 import type { Group, Keyword } from "@/lib/db/schema";
 
@@ -30,11 +31,13 @@ export function KeywordsTable({
   rows,
   groups,
   positionHistory,
+  baselinePositions,
 }: {
   projectId: string;
   rows: KeywordRow[];
   groups: Group[];
   positionHistory: Record<string, (number | null)[]>;
+  baselinePositions: Record<string, number | null>;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -51,6 +54,15 @@ export function KeywordsTable({
   const stats = useMemo(
     () => computeKeywordStats(rows.map((r) => r.keyword)),
     [rows],
+  );
+
+  const baselineStats = useMemo(
+    () =>
+      computeBaselineMovementStats(
+        rows.map((r) => r.keyword),
+        baselinePositions,
+      ),
+    [rows, baselinePositions],
   );
 
   const filtered = useMemo(() => {
@@ -161,24 +173,57 @@ export function KeywordsTable({
         onRunDueChecks={runDueChecks}
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search keyword or URL…"
-          className="max-w-xs"
-        />
-        <Select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-          <option value="movement">Sort by movement</option>
-          <option value="position">Sort by position</option>
-          <option value="lastChecked">Sort by last checked</option>
-        </Select>
-        <BulkActionsDialog
-          projectId={projectId}
-          groups={groups}
-          selectedIds={[...selected]}
-          onClearSelection={clearSelection}
-        />
+      <MovementGraph stats={baselineStats} />
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search keyword or URL…"
+            className="max-w-xs"
+          />
+          <Select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+            <option value="movement">Sort by movement</option>
+            <option value="position">Sort by position</option>
+            <option value="lastChecked">Sort by last checked</option>
+          </Select>
+          <BulkActionsDialog
+            projectId={projectId}
+            groups={groups}
+            selectedIds={[...selected]}
+            onClearSelection={clearSelection}
+          />
+        </div>
+        <div className="flex flex-wrap gap-1">
+          <button
+            type="button"
+            onClick={() => setGroupFilter("all")}
+            className={cn(
+              "rounded px-3 py-1 text-sm",
+              groupFilter === "all"
+                ? "bg-surface-hover text-foreground"
+                : "text-muted hover:text-foreground",
+            )}
+          >
+            All
+          </button>
+          {groups.map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => setGroupFilter(g.id)}
+              className={cn(
+                "rounded px-3 py-1 text-sm",
+                groupFilter === g.id
+                  ? "bg-surface-hover text-foreground"
+                  : "text-muted hover:text-foreground",
+              )}
+            >
+              {g.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       {selected.size > 0 && (
@@ -196,36 +241,6 @@ export function KeywordsTable({
           </Button>
         </div>
       )}
-
-      <div className="flex flex-wrap gap-1 border-b border-border pb-3">
-        <button
-          type="button"
-          onClick={() => setGroupFilter("all")}
-          className={cn(
-            "rounded px-3 py-1 text-sm",
-            groupFilter === "all"
-              ? "bg-surface-hover text-foreground"
-              : "text-muted hover:text-foreground",
-          )}
-        >
-          All
-        </button>
-        {groups.map((g) => (
-          <button
-            key={g.id}
-            type="button"
-            onClick={() => setGroupFilter(g.id)}
-            className={cn(
-              "rounded px-3 py-1 text-sm",
-              groupFilter === g.id
-                ? "bg-surface-hover text-foreground"
-                : "text-muted hover:text-foreground",
-            )}
-          >
-            {g.name}
-          </button>
-        ))}
-      </div>
 
       {rows.length === 0 ? (
         <div className="py-16 text-center">

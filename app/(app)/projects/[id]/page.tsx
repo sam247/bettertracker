@@ -6,7 +6,7 @@ import { KeywordsTable } from "@/components/keywords-table";
 import { ProjectForm } from "@/components/project-form";
 import { db } from "@/lib/db";
 import { groups, keywords, projects, rankChecks } from "@/lib/db/schema";
-import { buildPositionHistory } from "@/lib/keyword-history";
+import { buildBaselinePositions, buildPositionHistory } from "@/lib/keyword-history";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +62,24 @@ export default async function ProjectPage({
 
   const positionHistory = buildPositionHistory(historyRows);
 
+  const baselineRows = await db
+    .select({
+      keywordId: rankChecks.keywordId,
+      position: rankChecks.position,
+    })
+    .from(rankChecks)
+    .innerJoin(keywords, eq(rankChecks.keywordId, keywords.id))
+    .where(
+      and(
+        eq(keywords.projectId, id),
+        isNull(keywords.deletedAt),
+        eq(rankChecks.status, "success"),
+      ),
+    )
+    .orderBy(asc(rankChecks.createdAt));
+
+  const baselinePositions = buildBaselinePositions(baselineRows);
+
   if (edit === "true") {
     return (
       <div>
@@ -98,6 +116,7 @@ export default async function ProjectPage({
         rows={rows}
         groups={groupRows}
         positionHistory={positionHistory}
+        baselinePositions={baselinePositions}
       />
     </div>
   );

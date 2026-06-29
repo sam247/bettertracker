@@ -4,11 +4,18 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BulkActionsDialog } from "@/components/bulk-actions-dialog";
 import { ChangeCell } from "@/components/change-cell";
+import { FrequencyBadge } from "@/components/frequency-badge";
+import { KeywordDetailPanel } from "@/components/keyword-detail-panel";
+import { KeywordStatsBar } from "@/components/keyword-stats-bar";
+import { PositionCell } from "@/components/position-cell";
+import { PositionSparkline } from "@/components/position-sparkline";
+import { RankingUrlCell } from "@/components/ranking-url-cell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatRelative, isDue } from "@/lib/dates";
-import { cn, truncateUrl } from "@/lib/utils";
+import { computeKeywordStats, getMovement } from "@/lib/keyword-stats";
+import { cn, urlPath } from "@/lib/utils";
 import type { Group, Keyword } from "@/lib/db/schema";
 
 type KeywordRow = {
@@ -22,10 +29,12 @@ export function KeywordsTable({
   projectId,
   rows,
   groups,
+  positionHistory,
 }: {
   projectId: string;
   rows: KeywordRow[];
   groups: Group[];
+  positionHistory: Record<string, (number | null)[]>;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -33,7 +42,16 @@ export function KeywordsTable({
   const [sort, setSort] = useState<SortKey>("movement");
   const [checking, setChecking] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const detailRow = detailId
+    ? rows.find((r) => r.keyword.id === detailId) ?? null
+    : null;
+  const [runningDue, setRunningDue] = useState(false);
+
+  const stats = useMemo(
+    () => computeKeywordStats(rows.map((r) => r.keyword)),
+    [rows],
+  );
 
   const filtered = useMemo(() => {
     let list = rows;
@@ -44,21 +62,26 @@ export function KeywordsTable({
 
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      list = list.filter((r) =>
-        r.keyword.keyword.toLowerCase().includes(q),
-      );
+      list = list.filter((r) => {
+        const kw = r.keyword.keyword.toLowerCase();
+        const ranking = (r.keyword.currentRankingUrl ?? "").toLowerCase();
+        const target = (r.keyword.targetUrl ?? "").toLowerCase();
+        const rankingPath = urlPath(r.keyword.currentRankingUrl).toLowerCase();
+        const targetPath = urlPath(r.keyword.targetUrl).toLowerCase();
+        return (
+          kw.includes(q) ||
+          ranking.includes(q) ||
+          target.includes(q) ||
+          rankingPath.includes(q) ||
+          targetPath.includes(q)
+        );
+      });
     }
 
     return [...list].sort((a, b) => {
       if (sort === "movement") {
-        const changeA =
-          a.keyword.currentPosition !== null && a.keyword.previousPosition !== null
-            ? a.keyword.previousPosition - a.keyword.currentPosition
-            : -Infinity;
-        const changeB =
-          b.keyword.currentPosition !== null && b.keyword.previousPosition !== null
-            ? b.keyword.previousPosition - b.keyword.currentPosition
-            : -Infinity;
+        const changeA = getMovement(a.keyword) ?? -Infinity;
+        const changeB = getMovement(b.keyword) ?? -Infinity;
         return changeB - changeA;
       }
       if (sort === "position") {
@@ -109,65 +132,40 @@ export function KeywordsTable({
     setSelected(new Set());
   }
 
-  async function checkNow(id: string) {
+  async function checkNow(id: string, e?: React.MouseEvent) {
+    e?.stopPropagation();
     setChecking(id);
     await fetch(`/api/keywords/${id}/check`, { method: "POST" });
     setChecking(null);
     router.refresh();
   }
 
-  async function toggleEnabled(id: string, enabled: boolean) {
-    await fetch(`/api/keywords/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled: !enabled }),
-    });
-    router.refresh();
-  }
-
-  async function deleteKeyword(id: string) {
-    if (!confirm("Delete this keyword?")) return;
-    await fetch(`/api/keywords/${id}`, { method: "DELETE" });
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-    router.refresh();
-  }
-
-  async function deleteSelected() {
-    const ids = [...selected];
-    if (ids.length === 0) return;
-    if (!confirm(`Delete ${ids.length} keyword${ids.length === 1 ? "" : "s"}?`)) return;
-
-    setBulkDeleting(true);
-    await fetch(`/api/projects/${projectId}/keywords/bulk-delete`, {
+  async function runDueChecks() {
+    setRunningDue(true);
+    await fetch(`/api/projects/${projectId}/run-due-checks`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
     });
-    setBulkDeleting(false);
-    clearSelection();
+    setRunningDue(false);
     router.refresh();
   }
 
-  async function moveGroup(id: string, groupId: string) {
-    await fetch(`/api/keywords/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ groupId }),
-    });
-    router.refresh();
+  function openDetail(row: KeywordRow) {
+    setDetailId(row.keyword.id);
   }
 
   return (
     <div className="space-y-4">
+      <KeywordStatsBar
+        stats={stats}
+        runningDue={runningDue}
+        onRunDueChecks={runDueChecks}
+      />
+
       <div className="flex flex-wrap items-center gap-3">
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search keywords…"
+          placeholder="Search keyword or URL…"
           className="max-w-xs"
         />
         <Select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
@@ -185,17 +183,14 @@ export function KeywordsTable({
 
       {selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded border border-border bg-surface px-3 py-2 text-sm">
-          <span className="text-muted">
-            {selected.size} selected
-          </span>
-          <Button
-            size="sm"
-            variant="danger"
-            disabled={bulkDeleting}
-            onClick={deleteSelected}
-          >
-            {bulkDeleting ? "Deleting…" : "Delete selected"}
-          </Button>
+          <span className="text-muted">{selected.size} selected</span>
+          <BulkActionsDialog
+            projectId={projectId}
+            groups={groups}
+            selectedIds={[...selected]}
+            onClearSelection={clearSelection}
+            variant="inline"
+          />
           <Button size="sm" variant="ghost" onClick={clearSelection}>
             Clear
           </Button>
@@ -232,146 +227,136 @@ export function KeywordsTable({
         ))}
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-xs text-muted">
-              <th className="pb-2 pr-2 font-medium w-8">
-                <input
-                  type="checkbox"
-                  checked={allFilteredSelected}
-                  onChange={toggleAllFiltered}
-                  aria-label="Select all visible keywords"
-                  className="rounded border-border"
-                />
-              </th>
-              <th className="pb-2 pr-4 font-medium">Keyword</th>
-              <th className="pb-2 pr-4 font-medium">Group</th>
-              <th className="pb-2 pr-4 font-medium text-right">Current</th>
-              <th className="pb-2 pr-4 font-medium text-right">Previous</th>
-              <th className="pb-2 pr-4 font-medium text-right">Change</th>
-              <th className="pb-2 pr-4 font-medium text-right">Best</th>
-              <th className="pb-2 pr-4 font-medium">Ranking URL</th>
-              <th className="pb-2 pr-4 font-medium">Last checked</th>
-              <th className="pb-2 pr-4 font-medium">Frequency</th>
-              <th className="pb-2 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(({ keyword, group }) => {
-              const due = isDue(keyword.nextCheckAt);
-              const isSelected = selected.has(keyword.id);
-              return (
-                <tr
-                  key={keyword.id}
-                  className={cn(
-                    "border-b border-border/50 hover:bg-surface/50",
-                    isSelected && "bg-surface/30",
-                  )}
-                >
-                  <td className="py-2.5 pr-2">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleOne(keyword.id)}
-                      aria-label={`Select ${keyword.keyword}`}
-                      className="rounded border-border"
-                    />
-                  </td>
-                  <td className="py-2.5 pr-4 font-medium">
-                    {keyword.keyword}
-                    {!keyword.enabled && (
-                      <span className="ml-2 text-xs text-muted">(off)</span>
-                    )}
-                  </td>
-                  <td className="py-2.5 pr-4 text-muted">{group.name}</td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums">
-                    {keyword.currentPosition ?? "—"}
-                  </td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums text-muted">
-                    {keyword.previousPosition ?? "—"}
-                  </td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums">
-                    <ChangeCell
-                      current={keyword.currentPosition}
-                      previous={keyword.previousPosition}
-                    />
-                  </td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums text-muted">
-                    {keyword.bestPosition ?? "—"}
-                  </td>
-                  <td className="py-2.5 pr-4 max-w-[200px]">
-                    {keyword.currentRankingUrl ? (
-                      <a
-                        href={keyword.currentRankingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue text-xs"
-                        title={keyword.currentRankingUrl}
-                      >
-                        {truncateUrl(keyword.currentRankingUrl)}
-                      </a>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
-                  </td>
-                  <td
+      {rows.length === 0 ? (
+        <div className="py-16 text-center">
+          <p className="text-sm text-foreground">No keywords yet.</p>
+          <p className="mt-1 text-sm text-muted">
+            Paste keywords to begin tracking.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs text-muted">
+                <th className="w-8 pb-2 pr-2 font-medium">
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    onChange={toggleAllFiltered}
+                    aria-label="Select all visible keywords"
+                    className="rounded border-border"
+                  />
+                </th>
+                <th className="pb-2 pr-4 font-medium">Keyword</th>
+                <th className="pb-2 pr-4 font-medium text-right">Position</th>
+                <th className="pb-2 pr-4 font-medium text-right">Movement</th>
+                <th className="pb-2 pr-4 font-medium">Trend</th>
+                <th className="pb-2 pr-4 font-medium">Ranking URL</th>
+                <th className="pb-2 pr-4 font-medium text-right">Best</th>
+                <th className="pb-2 pr-4 font-medium">Group</th>
+                <th className="pb-2 pr-4 font-medium">Freq</th>
+                <th className="pb-2 pr-4 font-medium">Last</th>
+                <th className="pb-2 font-medium w-20" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((row) => {
+                const { keyword, group } = row;
+                const due = isDue(keyword.nextCheckAt);
+                const isSelected = selected.has(keyword.id);
+                const history = positionHistory[keyword.id] ?? [];
+
+                return (
+                  <tr
+                    key={keyword.id}
+                    onClick={() => openDetail(row)}
                     className={cn(
-                      "py-2.5 pr-4 text-xs",
-                      due ? "text-amber" : "text-muted",
+                      "cursor-pointer border-b border-border/50 transition-colors hover:bg-surface-hover/50",
+                      isSelected && "bg-surface/30",
+                      !keyword.enabled && "opacity-60",
                     )}
                   >
-                    {formatRelative(keyword.lastCheckedAt)}
-                  </td>
-                  <td className="py-2.5 pr-4 text-xs text-muted capitalize">
-                    {keyword.frequency}
-                  </td>
-                  <td className="py-2.5">
-                    <div className="flex items-center gap-1">
+                    <td
+                      className="py-2.5 pr-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleOne(keyword.id)}
+                        aria-label={`Select ${keyword.keyword}`}
+                        className="rounded border-border"
+                      />
+                    </td>
+                    <td className="max-w-[220px] py-2.5 pr-4 font-medium">
+                      <span className="block truncate">{keyword.keyword}</span>
+                    </td>
+                    <td className="py-2.5 pr-4 text-right">
+                      <PositionCell position={keyword.currentPosition} />
+                    </td>
+                    <td className="py-2.5 pr-4 text-right">
+                      <ChangeCell keyword={keyword} />
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <PositionSparkline positions={history} />
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <RankingUrlCell url={keyword.currentRankingUrl} />
+                    </td>
+                    <td className="py-2.5 pr-4 text-right tabular-nums text-xs text-muted">
+                      {keyword.bestPosition !== null
+                        ? `#${keyword.bestPosition}`
+                        : "—"}
+                    </td>
+                    <td className="py-2.5 pr-4 text-xs text-muted">
+                      {group.name}
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <FrequencyBadge frequency={keyword.frequency} />
+                    </td>
+                    <td
+                      className={cn(
+                        "py-2.5 pr-4 text-xs",
+                        due ? "text-amber" : "text-muted",
+                      )}
+                    >
+                      {formatRelative(keyword.lastCheckedAt)}
+                    </td>
+                    <td
+                      className="py-2.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Button
                         size="sm"
                         variant="ghost"
                         disabled={checking === keyword.id}
-                        onClick={() => checkNow(keyword.id)}
+                        onClick={(e) => checkNow(keyword.id, e)}
                       >
                         {checking === keyword.id ? "…" : "Check"}
                       </Button>
-                      <Select
-                        value={group.id}
-                        onChange={(e) => moveGroup(keyword.id, e.target.value)}
-                        className="text-xs py-1"
-                      >
-                        {groups.map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {g.name}
-                          </option>
-                        ))}
-                      </Select>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => toggleEnabled(keyword.id, keyword.enabled)}
-                      >
-                        {keyword.enabled ? "Off" : "On"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => deleteKeyword(keyword.id)}
-                      >
-                        Del
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {filtered.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted">No keywords found.</p>
-        )}
-      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {filtered.length === 0 && rows.length > 0 && (
+            <p className="py-8 text-center text-sm text-muted">
+              No keywords match your search.
+            </p>
+          )}
+        </div>
+      )}
+
+      {detailRow && (
+        <KeywordDetailPanel
+          keyword={detailRow.keyword}
+          group={detailRow.group}
+          groups={groups}
+          onClose={() => setDetailId(null)}
+        />
+      )}
     </div>
   );
 }

@@ -19,11 +19,17 @@ npm install
 
 ### 2. Environment variables
 
-Copy `.env.example` to `.env.local` and fill in:
+Copy `.env.example` to `.env.local`, or pull from Vercel:
+
+```bash
+vercel env pull .env.local
+```
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | Neon/Vercel Postgres connection string |
+| `POSTGRES_URL` | Set automatically by Vercel Postgres |
+| `POSTGRES_URL_NON_POOLING` | Use for `db:push` (direct connection) |
+| `DATABASE_URL` | Optional override — app also reads `POSTGRES_URL` |
 | `AUTH_SECRET` | Random string, min 32 characters |
 | `AUTH_PASSWORD` | Your login password |
 | `CRON_SECRET` | Random string for cron auth |
@@ -32,10 +38,15 @@ Copy `.env.example` to `.env.local` and fill in:
 
 ### 3. Database
 
-Push the schema to your database:
+Push the schema to your database (use the **real** URL from Vercel, not a placeholder):
 
 ```bash
+# Option A: pull env from Vercel, then push
+vercel env pull .env.local
 npm run db:push
+
+# Option B: one-off with the non-pooling URL from Vercel dashboard
+POSTGRES_URL_NON_POOLING="postgres://..." npm run db:push
 ```
 
 ### 4. Run locally

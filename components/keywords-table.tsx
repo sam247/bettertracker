@@ -178,26 +178,24 @@ export function KeywordsTable({
 
       <MovementGraph timeline={movementTimeline} stats={baselineStats} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search keyword or URL…"
-            className="max-w-xs"
-          />
-          <Select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-            <option value="movement">Sort by movement</option>
-            <option value="position">Sort by position</option>
-            <option value="lastChecked">Sort by last checked</option>
-          </Select>
-          <BulkActionsDialog
-            projectId={projectId}
-            groups={groups}
-            selectedIds={[...selected]}
-            onClearSelection={clearSelection}
-          />
-        </div>
+      <div className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search keyword or URL…"
+          className="max-w-xs"
+        />
+        <Select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+          <option value="movement">Sort by movement</option>
+          <option value="position">Sort by position</option>
+          <option value="lastChecked">Sort by last checked</option>
+        </Select>
+        <BulkActionsDialog
+          projectId={projectId}
+          groups={groups}
+          selectedIds={[...selected]}
+          onClearSelection={clearSelection}
+        />
         <div className="flex flex-wrap gap-1">
           <button
             type="button"

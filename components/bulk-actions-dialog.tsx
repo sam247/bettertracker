@@ -46,30 +46,43 @@ export function BulkActionsDialog({
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setMessage("Adding keywords and running initial rank checks…");
+    setMessage("Adding keywords…");
 
-    const res = await fetch(`/api/projects/${projectId}/keywords`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bulk, groupId, frequency }),
-    });
+    try {
+      const res = await fetch(`/api/projects/${projectId}/keywords`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bulk, groupId, frequency }),
+      });
 
-    const data = await res.json();
-    setLoading(false);
+      const data = await res.json();
 
-    if (!res.ok) {
-      setMessage(data.error ?? "Failed to add keywords");
-      return;
+      if (!res.ok) {
+        setMessage(data.error ?? "Failed to add keywords");
+        setLoading(false);
+        return;
+      }
+
+      const skipped =
+        data.skipped?.length > 0
+          ? ` (${data.skipped.length} duplicates skipped)`
+          : "";
+      setMessage(
+        `Added ${data.created.length} keywords${skipped}. Checks queued — use Run Due Checks.`,
+      );
+      setBulk("");
+      setLoading(false);
+      router.refresh();
+
+      void fetch(`/api/projects/${projectId}/run-due-checks`, {
+        method: "POST",
+      }).then(() => router.refresh());
+
+      setTimeout(close, 2000);
+    } catch {
+      setMessage("Request failed — try again");
+      setLoading(false);
     }
-
-    const skipped =
-      data.skipped?.length > 0
-        ? ` (${data.skipped.length} duplicates skipped)`
-        : "";
-    setMessage(`Added ${data.created.length} keywords${skipped}`);
-    setBulk("");
-    router.refresh();
-    setTimeout(close, 1500);
   }
 
   async function handleDelete(e: React.FormEvent) {

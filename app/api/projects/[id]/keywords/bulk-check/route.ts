@@ -35,11 +35,22 @@ export async function POST(request: Request, context: RouteContext) {
       ),
     );
 
+  const batchSize = Math.min(
+    parseInt(process.env.CRON_BATCH_SIZE ?? "5", 10),
+    5,
+  );
+  const batch = rows.slice(0, batchSize);
+
   const results = [];
-  for (const row of rows) {
+  for (const row of batch) {
     results.push(await runKeywordCheck(row.id));
   }
 
   const succeeded = results.filter((r) => r.success).length;
-  return NextResponse.json({ checked: results.length, succeeded, results });
+  return NextResponse.json({
+    checked: results.length,
+    succeeded,
+    remaining: Math.max(rows.length - batch.length, 0),
+    results,
+  });
 }

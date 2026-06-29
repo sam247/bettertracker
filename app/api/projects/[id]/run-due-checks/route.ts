@@ -50,11 +50,22 @@ export async function POST(_request: Request, context: RouteContext) {
       return aTime - bTime;
     });
 
+  const batchSize = Math.min(
+    parseInt(process.env.CRON_BATCH_SIZE ?? "5", 10),
+    5,
+  );
+  const batch = due.slice(0, batchSize);
+
   const results = [];
-  for (const keyword of due) {
+  for (const keyword of batch) {
     results.push(await runKeywordCheck(keyword.id));
   }
 
   const succeeded = results.filter((r) => r.success).length;
-  return NextResponse.json({ checked: results.length, succeeded, results });
+  return NextResponse.json({
+    checked: results.length,
+    succeeded,
+    remaining: Math.max(due.length - batch.length, 0),
+    results,
+  });
 }

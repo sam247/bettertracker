@@ -4,7 +4,7 @@ export function PositionCell({ position }: { position: number | null }) {
   }
 
   return (
-    <span className="text-base font-semibold tabular-nums text-foreground">
+    <span className="text-sm tabular-nums text-foreground">
       #{position}
     </span>
   );

@@ -1,12 +1,11 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
-import { runKeywordCheck } from "@/lib/check-runner";
 import { db } from "@/lib/db";
 import { groups, keywords } from "@/lib/db/schema";
 import { normaliseKeyword } from "@/lib/normalise-keyword";
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -71,7 +70,6 @@ export async function POST(request: Request, context: RouteContext) {
 
   const created = [];
   const skipped: string[] = [];
-  const checked: { keywordId: string; success: boolean; position: number | null }[] = [];
 
   for (const raw of keywordList) {
     const keyword = raw.trim();
@@ -91,17 +89,10 @@ export async function POST(request: Request, context: RouteContext) {
         })
         .returning();
       created.push(row);
-
-      const result = await runKeywordCheck(row.id);
-      checked.push({
-        keywordId: row.id,
-        success: result.success,
-        position: result.position,
-      });
     } catch {
       skipped.push(keyword);
     }
   }
 
-  return NextResponse.json({ created, skipped, checked }, { status: 201 });
+  return NextResponse.json({ created, skipped }, { status: 201 });
 }

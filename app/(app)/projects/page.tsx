@@ -105,10 +105,10 @@ export default async function ProjectsPage({
               <th className="pb-2 pr-4 font-medium">Name</th>
               <th className="pb-2 pr-4 font-medium">Domain</th>
               <th className="pb-2 pr-4 font-medium">Region</th>
-              <th className="pb-2 pl-4 pr-2 font-medium text-right">Avg position</th>
-              <th className="pb-2 px-2 font-medium text-right">Trend</th>
-              <th className="pb-2 px-2 font-medium text-right">Movement</th>
-              <th className="pb-2 pl-2 pr-4 font-medium text-right">Keywords</th>
+              <th className="pb-2 pl-4 pr-2 font-medium text-center">Avg position</th>
+              <th className="pb-2 px-2 font-medium text-center">Movement</th>
+              <th className="pb-2 px-2 font-medium text-center">Trend</th>
+              <th className="pb-2 pl-2 pr-4 font-medium text-center">Keywords</th>
             </tr>
           </thead>
           <tbody>
@@ -134,22 +134,22 @@ export default async function ProjectsPage({
                   <td className="py-3 pr-4 text-muted">
                     {formatRegionDisplay(project.region)}
                   </td>
-                  <td className="py-3 pl-4 pr-2 text-right tabular-nums text-muted">
+                  <td className="py-3 pl-4 pr-2 text-center tabular-nums text-muted">
                     {stats.avgPosition !== null
                       ? stats.avgPosition % 1 === 0
                         ? stats.avgPosition
                         : stats.avgPosition.toFixed(1)
                       : "—"}
                   </td>
+                  <td className="py-3 px-2 text-center">
+                    <ProjectMovementCell net={stats.netMovement} />
+                  </td>
                   <td className="py-3 px-2">
-                    <div className="flex justify-end">
+                    <div className="flex justify-center">
                       <PositionSparkline positions={trend} />
                     </div>
                   </td>
-                  <td className="py-3 px-2 text-right">
-                    <ProjectMovementCell net={stats.netMovement} />
-                  </td>
-                  <td className="py-3 pl-2 pr-4 text-right tabular-nums text-muted">
+                  <td className="py-3 pl-2 pr-4 text-center tabular-nums text-muted">
                     {keywordCount}
                   </td>
                 </tr>

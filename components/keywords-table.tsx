@@ -308,7 +308,7 @@ export function KeywordsTable({
                     </td>
                     <td className="py-2.5 pr-4 text-right tabular-nums text-xs text-muted">
                       {keyword.bestPosition !== null
-                        ? `#${keyword.bestPosition}`
+                        ? keyword.bestPosition
                         : "—"}
                     </td>
                     <td className="py-2.5 pr-4 text-xs text-muted">

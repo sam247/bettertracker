@@ -70,7 +70,7 @@ export function PositionSparkline({
       </svg>
       {hover !== null && positions[hover] !== undefined && (
         <div className="absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] text-foreground">
-          {positions[hover] === null ? "—" : `#${positions[hover]}`}
+          {positions[hover] === null ? "—" : positions[hover]}
         </div>
       )}
     </div>

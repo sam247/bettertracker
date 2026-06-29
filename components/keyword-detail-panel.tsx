@@ -134,7 +134,7 @@ export function KeywordDetailPanel({
               <dt className="text-muted">Previous</dt>
               <dd className="tabular-nums">
                 {keyword.previousPosition !== null
-                  ? `#${keyword.previousPosition}`
+                  ? keyword.previousPosition
                   : "—"}
               </dd>
             </div>
@@ -142,7 +142,7 @@ export function KeywordDetailPanel({
               <dt className="text-muted">Best</dt>
               <dd className="tabular-nums">
                 {keyword.bestPosition !== null
-                  ? `#${keyword.bestPosition}`
+                  ? keyword.bestPosition
                   : "—"}
               </dd>
             </div>
@@ -206,7 +206,7 @@ export function KeywordDetailPanel({
                       })}
                     </span>
                     <span className="tabular-nums">
-                      {entry.position !== null ? `#${entry.position}` : "—"}
+                      {entry.position !== null ? entry.position : "—"}
                     </span>
                   </div>
                 ))}

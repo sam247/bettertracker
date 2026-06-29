@@ -3,16 +3,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAutoRefresh } from "@/lib/use-auto-refresh";
 import { KeywordStatsBar } from "@/components/keyword-stats-bar";
+import { useChecking } from "@/components/checking-context";
 import { formatRegionDisplay } from "@/lib/format-region";
 import { computeKeywordStats } from "@/lib/keyword-stats";
 import { isDue } from "@/lib/dates";
-import {
-  dispatchCheckingEnded,
-  dispatchCheckingStarted,
-  RUN_DUE_CHECKS,
-} from "@/lib/checking-events";
+import { RUN_DUE_CHECKS } from "@/lib/checking-events";
 import type { Keyword } from "@/lib/db/schema";
 
 export function ProjectPageHeader({
@@ -31,20 +27,19 @@ export function ProjectPageHeader({
 }) {
   const router = useRouter();
   const [runningDue, setRunningDue] = useState(false);
-
-  useAutoRefresh(runningDue, 4000);
+  const { startChecking, stopChecking } = useChecking();
 
   const stats = useMemo(() => computeKeywordStats(keywords), [keywords]);
 
   const runDueChecks = useCallback(async () => {
-    const dueIds = keywords
+    const batchIds = keywords
       .filter((k) => k.enabled && isDue(k.nextCheckAt))
-      .map((k) => k.id);
-    const batchIds = dueIds.slice(0, 5);
+      .map((k) => k.id)
+      .slice(0, 5);
 
     if (batchIds.length === 0) return;
 
-    dispatchCheckingStarted(batchIds);
+    startChecking(batchIds);
     setRunningDue(true);
     try {
       await fetch(`/api/projects/${projectId}/run-due-checks`, {
@@ -52,10 +47,10 @@ export function ProjectPageHeader({
       });
       router.refresh();
     } finally {
-      dispatchCheckingEnded(batchIds);
+      stopChecking(batchIds);
       setRunningDue(false);
     }
-  }, [keywords, projectId, router]);
+  }, [keywords, projectId, router, startChecking, stopChecking]);
 
   useEffect(() => {
     function onRunDueChecks() {

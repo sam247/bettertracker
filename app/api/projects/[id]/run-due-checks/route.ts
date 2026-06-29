@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { runKeywordCheck } from "@/lib/check-runner";
@@ -40,7 +40,8 @@ export async function POST(_request: Request, context: RouteContext) {
         eq(keywords.enabled, true),
         isNull(keywords.deletedAt),
       ),
-    );
+    )
+    .orderBy(asc(keywords.keyword));
 
   const due = rows
     .filter((k) => isDue(k.nextCheckAt))

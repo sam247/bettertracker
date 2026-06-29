@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { ArchiveProjectButton } from "@/components/archive-project-button";
+import { CheckingProvider } from "@/components/checking-context";
 import { DeleteProjectButton } from "@/components/delete-project-button";
 import { GroupsManager } from "@/components/groups-manager";
 import { KeywordsTable } from "@/components/keywords-table";
@@ -118,7 +119,7 @@ export default async function ProjectPage({
   }
 
   return (
-    <div>
+    <CheckingProvider>
       <ProjectPageHeader
         projectId={id}
         project={project}
@@ -139,6 +140,6 @@ export default async function ProjectPage({
           movementTimeline={movementTimeline}
         />
       </Suspense>
-    </div>
+    </CheckingProvider>
   );
 }

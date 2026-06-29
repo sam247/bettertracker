@@ -5,10 +5,12 @@ export function KeywordStatsBar({
   stats,
   runningDue,
   onRunDueChecks,
+  variant = "default",
 }: {
   stats: KeywordStats;
   runningDue: boolean;
   onRunDueChecks: () => void;
+  variant?: "default" | "inline";
 }) {
   const items = [
     { label: "Keywords", value: stats.keywords },
@@ -19,10 +21,16 @@ export function KeywordStatsBar({
   ];
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+    <div
+      className={
+        variant === "inline"
+          ? "flex flex-wrap items-center justify-end gap-6"
+          : "flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4"
+      }
+    >
       <div className="flex flex-wrap gap-6">
         {items.map((item) => (
-          <div key={item.label}>
+          <div key={item.label} className="text-right">
             <div className="text-[10px] uppercase tracking-wide text-muted">
               {item.label}
             </div>

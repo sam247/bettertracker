@@ -1,9 +1,9 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { and, asc, eq, isNull } from "drizzle-orm";
 import { ArchiveProjectButton } from "@/components/archive-project-button";
 import { KeywordsTable } from "@/components/keywords-table";
 import { ProjectForm } from "@/components/project-form";
+import { ProjectPageHeader } from "@/components/project-page-header";
+import { notFound } from "next/navigation";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { groups, keywords, projects, rankChecks } from "@/lib/db/schema";
 import { buildBaselinePositions, buildMovementTimeline, buildPositionHistory } from "@/lib/keyword-history";
@@ -85,22 +85,11 @@ export default async function ProjectPage({
 
   return (
     <div>
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-medium">{project.name}</h1>
-          <p className="mt-1 text-sm text-muted">
-            {project.targetDomain} · {project.region} · {project.device}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href={`/projects/${id}?edit=true`}
-            className="text-sm text-blue no-underline hover:underline"
-          >
-            Edit
-          </Link>
-        </div>
-      </div>
+      <ProjectPageHeader
+        projectId={id}
+        project={project}
+        keywords={rows.map((r) => r.keyword)}
+      />
 
       <KeywordsTable
         projectId={id}

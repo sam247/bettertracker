@@ -5,8 +5,8 @@ import type { MovementTimelinePoint } from "@/lib/keyword-history";
 import type { BaselineMovementStats } from "@/lib/keyword-stats";
 
 const CHART_WIDTH = 1000;
-const CHART_HEIGHT = 200;
-const PADDING = { top: 20, right: 16, bottom: 32, left: 40 };
+const CHART_HEIGHT = 250;
+const PADDING = { top: 24, right: 16, bottom: 32, left: 40 };
 
 export function MovementGraph({
   timeline,
@@ -67,7 +67,7 @@ export function MovementGraph({
         ];
 
   return (
-    <div className="border-b border-border pb-4">
+    <div className="border-b border-border pb-4 mb-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="text-[10px] uppercase tracking-wide text-muted">
           Movement from baseline
@@ -88,7 +88,7 @@ export function MovementGraph({
       <div className="relative w-full">
         <svg
           viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-          className="h-[200px] w-full"
+          className="h-[250px] w-full"
           preserveAspectRatio="none"
           aria-label="Movement from baseline over time"
           onMouseLeave={() => setHover(null)}

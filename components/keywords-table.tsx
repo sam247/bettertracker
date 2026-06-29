@@ -6,7 +6,6 @@ import { BulkActionsDialog } from "@/components/bulk-actions-dialog";
 import { ChangeCell } from "@/components/change-cell";
 import { FrequencyBadge } from "@/components/frequency-badge";
 import { KeywordDetailPanel } from "@/components/keyword-detail-panel";
-import { KeywordStatsBar } from "@/components/keyword-stats-bar";
 import { MovementGraph } from "@/components/movement-graph";
 import { PositionCell } from "@/components/position-cell";
 import { PositionSparkline } from "@/components/position-sparkline";
@@ -15,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatRelative, isDue } from "@/lib/dates";
-import { computeBaselineMovementStats, computeKeywordStats, getMovement } from "@/lib/keyword-stats";
+import { computeBaselineMovementStats, getMovement } from "@/lib/keyword-stats";
 import { cn, urlPath } from "@/lib/utils";
 import type { MovementTimelinePoint } from "@/lib/keyword-history";
 import type { Group, Keyword } from "@/lib/db/schema";
@@ -52,12 +51,6 @@ export function KeywordsTable({
   const detailRow = detailId
     ? rows.find((r) => r.keyword.id === detailId) ?? null
     : null;
-  const [runningDue, setRunningDue] = useState(false);
-
-  const stats = useMemo(
-    () => computeKeywordStats(rows.map((r) => r.keyword)),
-    [rows],
-  );
 
   const baselineStats = useMemo(
     () =>
@@ -155,47 +148,34 @@ export function KeywordsTable({
     router.refresh();
   }
 
-  async function runDueChecks() {
-    setRunningDue(true);
-    await fetch(`/api/projects/${projectId}/run-due-checks`, {
-      method: "POST",
-    });
-    setRunningDue(false);
-    router.refresh();
-  }
-
   function openDetail(row: KeywordRow) {
     setDetailId(row.keyword.id);
   }
 
   return (
     <div className="space-y-4">
-      <KeywordStatsBar
-        stats={stats}
-        runningDue={runningDue}
-        onRunDueChecks={runDueChecks}
-      />
-
       <MovementGraph timeline={movementTimeline} stats={baselineStats} />
 
-      <div className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search keyword or URL…"
-          className="max-w-xs"
-        />
-        <Select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-          <option value="movement">Sort by movement</option>
-          <option value="position">Sort by position</option>
-          <option value="lastChecked">Sort by last checked</option>
-        </Select>
-        <BulkActionsDialog
-          projectId={projectId}
-          groups={groups}
-          selectedIds={[...selected]}
-          onClearSelection={clearSelection}
-        />
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search keyword or URL…"
+            className="max-w-xs"
+          />
+          <Select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+            <option value="movement">Sort by movement</option>
+            <option value="position">Sort by position</option>
+            <option value="lastChecked">Sort by last checked</option>
+          </Select>
+          <BulkActionsDialog
+            projectId={projectId}
+            groups={groups}
+            selectedIds={[...selected]}
+            onClearSelection={clearSelection}
+          />
+        </div>
         <div className="flex flex-wrap gap-1">
           <button
             type="button"

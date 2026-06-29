@@ -233,8 +233,15 @@ export function KeywordsTable({
         <div className="py-16 text-center">
           <p className="text-sm text-foreground">No keywords yet.</p>
           <p className="mt-1 text-sm text-muted">
-            Paste keywords to begin tracking.
+            Add keywords to begin tracking.
           </p>
+          <div className="mt-4">
+            <BulkActionsDialog
+              projectId={projectId}
+              groups={groups}
+              triggerLabel="Add keywords"
+            />
+          </div>
         </div>
       ) : (
         <div className="overflow-x-auto">

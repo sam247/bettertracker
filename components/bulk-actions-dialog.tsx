@@ -15,12 +15,14 @@ export function BulkActionsDialog({
   selectedIds = [],
   onClearSelection,
   variant = "button",
+  triggerLabel,
 }: {
   projectId: string;
   groups: { id: string; name: string }[];
   selectedIds?: string[];
   onClearSelection?: () => void;
   variant?: "button" | "inline";
+  triggerLabel?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -39,7 +41,13 @@ export function BulkActionsDialog({
   }
 
   function openDialog() {
-    setTab(selectedIds.length > 0 && variant === "inline" ? "manage" : "add");
+    setTab(
+      triggerLabel
+        ? "add"
+        : selectedIds.length > 0 && variant === "inline"
+          ? "manage"
+          : "add",
+    );
     setOpen(true);
   }
 
@@ -253,7 +261,7 @@ export function BulkActionsDialog({
 
     return (
       <Button type="button" onClick={openDialog}>
-        Bulk actions
+        {triggerLabel ?? "Bulk actions"}
       </Button>
     );
   }

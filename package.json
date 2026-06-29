@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:consolidate-groups": "tsx scripts/consolidate-groups-to-default.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
@@ -30,6 +31,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }

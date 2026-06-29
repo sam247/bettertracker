@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAutoRefresh } from "@/lib/use-auto-refresh";
-import { Spinner } from "@/components/spinner";
 import { BulkActionsDialog } from "@/components/bulk-actions-dialog";
 import { ChangeCell } from "@/components/change-cell";
 import { FrequencyBadge } from "@/components/frequency-badge";
@@ -12,9 +11,10 @@ import { MovementGraph } from "@/components/movement-graph";
 import { PositionCell } from "@/components/position-cell";
 import { PositionSparkline } from "@/components/position-sparkline";
 import { RankingUrlCell } from "@/components/ranking-url-cell";
-import { Button } from "@/components/ui/button";
+import { KeywordActionsMenu } from "@/components/keyword-actions-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { formatRelative, isDue } from "@/lib/dates";
 import { computeBaselineMovementStats, getMovement } from "@/lib/keyword-stats";
 import { cn, urlPath } from "@/lib/utils";
@@ -262,15 +262,15 @@ export function KeywordsTable({
                   />
                 </th>
                 <th className="pb-2 pr-4 font-medium">Keyword</th>
-                <th className="pb-2 pr-4 font-medium text-right">Position</th>
-                <th className="pb-2 pr-4 font-medium text-right">Movement</th>
-                <th className="pb-2 pr-4 font-medium">Trend</th>
-                <th className="pb-2 pr-4 font-medium">Ranking URL</th>
-                <th className="pb-2 pr-4 font-medium text-right">Best</th>
+                <th className="px-4 pb-2 font-medium text-center">Position</th>
+                <th className="px-4 pb-2 font-medium text-center">Movement</th>
+                <th className="px-4 pb-2 font-medium text-center">Best</th>
+                <th className="px-4 pb-2 font-medium text-center">Trend</th>
+                <th className="pb-2 pl-4 pr-6 font-medium text-left">Ranking URL</th>
                 <th className="pb-2 pr-4 font-medium">Group</th>
                 <th className="pb-2 pr-4 font-medium">Freq</th>
                 <th className="pb-2 pr-4 font-medium">Last</th>
-                <th className="pb-2 font-medium w-20" />
+                <th className="pb-2 pr-2 font-medium text-right">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -305,22 +305,27 @@ export function KeywordsTable({
                     <td className="max-w-[220px] py-2.5 pr-4 font-medium">
                       <span className="block truncate">{keyword.keyword}</span>
                     </td>
-                    <td className="py-2.5 pr-4 text-right">
-                      <PositionCell position={keyword.currentPosition} />
+                    <td className="px-4 py-2.5 text-center">
+                      <PositionCell
+                        position={keyword.currentPosition}
+                        checking={checking === keyword.id}
+                      />
                     </td>
-                    <td className="py-2.5 pr-4 text-right">
+                    <td className="px-4 py-2.5 text-center">
                       <ChangeCell keyword={keyword} />
                     </td>
-                    <td className="py-2.5 pr-4">
-                      <PositionSparkline positions={history} />
-                    </td>
-                    <td className="py-2.5 pr-4">
-                      <RankingUrlCell url={keyword.currentRankingUrl} />
-                    </td>
-                    <td className="py-2.5 pr-4 text-right tabular-nums text-xs text-muted">
+                    <td className="px-4 py-2.5 text-center tabular-nums text-xs text-muted">
                       {keyword.bestPosition !== null
                         ? keyword.bestPosition
                         : "—"}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex justify-center">
+                        <PositionSparkline positions={history} />
+                      </div>
+                    </td>
+                    <td className="py-2.5 pl-4 pr-6 text-left">
+                      <RankingUrlCell url={keyword.currentRankingUrl} />
                     </td>
                     <td className="py-2.5 pr-4 text-xs text-muted">
                       {group.name}
@@ -337,23 +342,16 @@ export function KeywordsTable({
                       {formatRelative(keyword.lastCheckedAt)}
                     </td>
                     <td
-                      className="py-2.5"
+                      className="py-2.5 pr-2 text-right"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={checking === keyword.id}
-                        onClick={(e) => checkNow(keyword.id, e)}
-                      >
-                        {checking === keyword.id ? (
-                          <span className="flex items-center gap-1.5">
-                            <Spinner /> Checking
-                          </span>
-                        ) : (
-                          "Check"
-                        )}
-                      </Button>
+                      <div className="flex justify-end">
+                        <KeywordActionsMenu
+                          keyword={keyword}
+                          checking={checking === keyword.id}
+                          onCheck={() => checkNow(keyword.id)}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );

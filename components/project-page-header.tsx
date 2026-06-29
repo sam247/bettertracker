@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAutoRefresh } from "@/lib/use-auto-refresh";
 import { KeywordStatsBar } from "@/components/keyword-stats-bar";
 import { formatRegionDisplay } from "@/lib/format-region";
 import { computeKeywordStats } from "@/lib/keyword-stats";
@@ -24,6 +25,8 @@ export function ProjectPageHeader({
 }) {
   const router = useRouter();
   const [runningDue, setRunningDue] = useState(false);
+
+  useAutoRefresh(runningDue, 4000);
 
   const stats = useMemo(() => computeKeywordStats(keywords), [keywords]);
 

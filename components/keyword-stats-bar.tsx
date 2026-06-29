@@ -1,5 +1,6 @@
 import type { KeywordStats } from "@/lib/keyword-stats";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/spinner";
 
 export function KeywordStatsBar({
   stats,
@@ -44,7 +45,13 @@ export function KeywordStatsBar({
             Due Today: <span className="text-foreground">{stats.dueToday}</span>
           </span>
           <Button size="sm" disabled={runningDue} onClick={onRunDueChecks}>
-            {runningDue ? "Running…" : "Run Due Checks"}
+            {runningDue ? (
+              <span className="flex items-center gap-1.5">
+                <Spinner /> Running…
+              </span>
+            ) : (
+              "Run Due Checks"
+            )}
           </Button>
         </div>
       )}

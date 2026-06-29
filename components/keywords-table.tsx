@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAutoRefresh } from "@/lib/use-auto-refresh";
+import { Spinner } from "@/components/spinner";
 import { BulkActionsDialog } from "@/components/bulk-actions-dialog";
 import { ChangeCell } from "@/components/change-cell";
 import { FrequencyBadge } from "@/components/frequency-badge";
@@ -46,6 +48,8 @@ export function KeywordsTable({
   const [groupFilter, setGroupFilter] = useState("all");
   const [sort, setSort] = useState<SortKey>("movement");
   const [checking, setChecking] = useState<string | null>(null);
+
+  useAutoRefresh(checking !== null, 4000);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detailId, setDetailId] = useState<string | null>(null);
   const detailRow = detailId
@@ -342,7 +346,13 @@ export function KeywordsTable({
                         disabled={checking === keyword.id}
                         onClick={(e) => checkNow(keyword.id, e)}
                       >
-                        {checking === keyword.id ? "…" : "Check"}
+                        {checking === keyword.id ? (
+                          <span className="flex items-center gap-1.5">
+                            <Spinner /> Checking
+                          </span>
+                        ) : (
+                          "Check"
+                        )}
                       </Button>
                     </td>
                   </tr>

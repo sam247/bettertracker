@@ -93,6 +93,7 @@ export const apiLogs = pgTable("api_logs", {
   creditsCost: integer("credits_cost").notNull().default(0),
   httpStatus: integer("http_status"),
   error: text("error"),
+  responseSnippet: text("response_snippet"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

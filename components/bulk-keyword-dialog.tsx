@@ -24,7 +24,7 @@ export function BulkKeywordDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setMessage("");
+    setMessage("Adding keywords and running initial rank checks…");
 
     const res = await fetch(`/api/projects/${projectId}/keywords`, {
       method: "POST",

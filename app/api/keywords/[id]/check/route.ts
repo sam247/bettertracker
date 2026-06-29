@@ -4,6 +4,8 @@ import { runKeywordCheck } from "@/lib/check-runner";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+export const maxDuration = 300;
+
 export async function POST(_request: Request, context: RouteContext) {
   if (!(await requireAuth())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

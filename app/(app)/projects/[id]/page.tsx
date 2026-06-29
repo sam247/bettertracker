@@ -1,4 +1,5 @@
 import { ArchiveProjectButton } from "@/components/archive-project-button";
+import { DeleteProjectButton } from "@/components/delete-project-button";
 import { KeywordsTable } from "@/components/keywords-table";
 import { ProjectForm } from "@/components/project-form";
 import { ProjectPageHeader } from "@/components/project-page-header";
@@ -76,8 +77,25 @@ export default async function ProjectPage({
       <div>
         <h1 className="mb-8 text-xl font-medium">Edit project</h1>
         <ProjectForm project={project} />
-        <div className="mt-8 border-t border-border pt-8">
-          <ArchiveProjectButton projectId={project.id} />
+        <div className="mt-8 space-y-6 border-t border-border pt-8">
+          <div>
+            <h2 className="mb-2 text-sm font-medium">Archive</h2>
+            <p className="mb-3 text-xs text-muted">
+              Stop tracking keywords. Data is kept and can be viewed under
+              archived projects.
+            </p>
+            <ArchiveProjectButton projectId={project.id} />
+          </div>
+          <div>
+            <h2 className="mb-2 text-sm font-medium">Delete</h2>
+            <p className="mb-3 text-xs text-muted">
+              Permanently remove this project, all keywords, and rank history.
+            </p>
+            <DeleteProjectButton
+              projectId={project.id}
+              projectName={project.name}
+            />
+          </div>
         </div>
       </div>
     );

@@ -5,17 +5,12 @@ export function buildPositionHistory(
 
   for (const row of rows) {
     const list = grouped.get(row.keywordId) ?? [];
-    if (list.length < 10) {
-      list.push(row.position);
-      grouped.set(row.keywordId, list);
-    }
+    list.push(row.position);
+    if (list.length > 10) list.shift();
+    grouped.set(row.keywordId, list);
   }
 
-  const result: Record<string, (number | null)[]> = {};
-  for (const [id, list] of grouped) {
-    result[id] = [...list].reverse();
-  }
-  return result;
+  return Object.fromEntries(grouped);
 }
 
 export function buildBaselinePositions(
@@ -30,4 +25,105 @@ export function buildBaselinePositions(
   }
 
   return result;
+}
+
+export interface MovementTimelinePoint {
+  date: string;
+  label: string;
+  improved: number;
+  dropped: number;
+  unchanged: number;
+  net: number;
+}
+
+function dateKey(value: Date | string): string {
+  const d = typeof value === "string" ? new Date(value) : value;
+  return d.toISOString().slice(0, 10);
+}
+
+function formatTimelineLabel(iso: string): string {
+  const today = dateKey(new Date());
+  if (iso === today) return "Today";
+
+  const d = new Date(`${iso}T12:00:00`);
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+export function buildMovementTimeline(
+  rows: { keywordId: string; position: number | null; createdAt: Date | string }[],
+  baselines: Record<string, number | null>,
+  keywordIds: string[],
+): MovementTimelinePoint[] {
+  const enabled = new Set(keywordIds);
+  const byKeyword = new Map<
+    string,
+    { position: number | null; createdAt: Date }[]
+  >();
+
+  for (const row of rows) {
+    if (!enabled.has(row.keywordId)) continue;
+
+    const list = byKeyword.get(row.keywordId) ?? [];
+    list.push({
+      position: row.position,
+      createdAt:
+        typeof row.createdAt === "string"
+          ? new Date(row.createdAt)
+          : row.createdAt,
+    });
+    byKeyword.set(row.keywordId, list);
+  }
+
+  const dates = new Set<string>();
+  for (const row of rows) {
+    if (enabled.has(row.keywordId)) {
+      dates.add(
+        dateKey(
+          typeof row.createdAt === "string"
+            ? new Date(row.createdAt)
+            : row.createdAt,
+        ),
+      );
+    }
+  }
+
+  const sortedDates = [...dates].sort();
+  if (sortedDates.length === 0) return [];
+
+  return sortedDates.map((date) => {
+    const dayEnd = new Date(`${date}T23:59:59.999Z`);
+    let improved = 0;
+    let dropped = 0;
+    let unchanged = 0;
+
+    for (const keywordId of keywordIds) {
+      const baseline = baselines[keywordId];
+      if (baseline === undefined || baseline === null) continue;
+
+      const checks = byKeyword.get(keywordId) ?? [];
+      let latest: number | null = null;
+
+      for (const check of checks) {
+        if (check.createdAt <= dayEnd && check.position !== null) {
+          latest = check.position;
+        }
+      }
+
+      if (latest === null) continue;
+
+      const movement = baseline - latest;
+      if (movement > 0) improved++;
+      else if (movement < 0) dropped++;
+      else unchanged++;
+    }
+
+    return {
+      date,
+      label: formatTimelineLabel(date),
+      improved,
+      dropped,
+      unchanged,
+      net: improved - dropped,
+    };
+  });
 }

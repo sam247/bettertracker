@@ -17,6 +17,7 @@ import { Select } from "@/components/ui/select";
 import { formatRelative, isDue } from "@/lib/dates";
 import { computeBaselineMovementStats, computeKeywordStats, getMovement } from "@/lib/keyword-stats";
 import { cn, urlPath } from "@/lib/utils";
+import type { MovementTimelinePoint } from "@/lib/keyword-history";
 import type { Group, Keyword } from "@/lib/db/schema";
 
 type KeywordRow = {
@@ -32,12 +33,14 @@ export function KeywordsTable({
   groups,
   positionHistory,
   baselinePositions,
+  movementTimeline,
 }: {
   projectId: string;
   rows: KeywordRow[];
   groups: Group[];
   positionHistory: Record<string, (number | null)[]>;
   baselinePositions: Record<string, number | null>;
+  movementTimeline: MovementTimelinePoint[];
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -173,7 +176,7 @@ export function KeywordsTable({
         onRunDueChecks={runDueChecks}
       />
 
-      <MovementGraph stats={baselineStats} />
+      <MovementGraph timeline={movementTimeline} stats={baselineStats} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
         <div className="flex flex-wrap items-center gap-3">

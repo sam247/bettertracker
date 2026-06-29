@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { ArchiveProjectButton } from "@/components/archive-project-button";
 import { KeywordsTable } from "@/components/keywords-table";
 import { ProjectForm } from "@/components/project-form";
 import { db } from "@/lib/db";
 import { groups, keywords, projects, rankChecks } from "@/lib/db/schema";
-import { buildBaselinePositions, buildPositionHistory } from "@/lib/keyword-history";
+import { buildBaselinePositions, buildMovementTimeline, buildPositionHistory } from "@/lib/keyword-history";
 
 export const dynamic = "force-dynamic";
 
@@ -44,28 +44,11 @@ export default async function ProjectPage({
     .where(and(eq(keywords.projectId, id), isNull(keywords.deletedAt)))
     .orderBy(asc(keywords.keyword));
 
-  const historyRows = await db
+  const checkRows = await db
     .select({
       keywordId: rankChecks.keywordId,
       position: rankChecks.position,
-    })
-    .from(rankChecks)
-    .innerJoin(keywords, eq(rankChecks.keywordId, keywords.id))
-    .where(
-      and(
-        eq(keywords.projectId, id),
-        isNull(keywords.deletedAt),
-        eq(rankChecks.status, "success"),
-      ),
-    )
-    .orderBy(desc(rankChecks.createdAt));
-
-  const positionHistory = buildPositionHistory(historyRows);
-
-  const baselineRows = await db
-    .select({
-      keywordId: rankChecks.keywordId,
-      position: rankChecks.position,
+      createdAt: rankChecks.createdAt,
     })
     .from(rankChecks)
     .innerJoin(keywords, eq(rankChecks.keywordId, keywords.id))
@@ -78,7 +61,15 @@ export default async function ProjectPage({
     )
     .orderBy(asc(rankChecks.createdAt));
 
-  const baselinePositions = buildBaselinePositions(baselineRows);
+  const positionHistory = buildPositionHistory(checkRows);
+  const baselinePositions = buildBaselinePositions(checkRows);
+  const movementTimeline = buildMovementTimeline(
+    checkRows,
+    baselinePositions,
+    rows
+      .filter((r) => r.keyword.enabled)
+      .map((r) => r.keyword.id),
+  );
 
   if (edit === "true") {
     return (
@@ -117,6 +108,7 @@ export default async function ProjectPage({
         groups={groupRows}
         positionHistory={positionHistory}
         baselinePositions={baselinePositions}
+        movementTimeline={movementTimeline}
       />
     </div>
   );

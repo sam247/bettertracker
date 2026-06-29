@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { usePostCronRefresh } from "@/lib/use-post-cron-refresh";
 
 interface CreditsData {
   remaining: number | null;
@@ -16,12 +17,12 @@ interface CreditsData {
 export function CreditsPanel() {
   const [data, setData] = useState<CreditsData | null>(null);
 
-  function loadCredits() {
+  const loadCredits = useCallback(() => {
     fetch("/api/credits")
       .then((r) => r.json())
       .then(setData)
       .catch(() => null);
-  }
+  }, []);
 
   useEffect(() => {
     loadCredits();
@@ -33,7 +34,9 @@ export function CreditsPanel() {
     window.addEventListener("bettertracker:refresh-credits", onRefresh);
     return () =>
       window.removeEventListener("bettertracker:refresh-credits", onRefresh);
-  }, []);
+  }, [loadCredits]);
+
+  usePostCronRefresh(loadCredits);
 
   if (!data) {
     return <div className="text-xs text-muted">Loading credits…</div>;

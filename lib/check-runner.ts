@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { keywords, projects, rankChecks } from "@/lib/db/schema";
-import { addFrequency, type Frequency } from "@/lib/dates";
+import { getNextCheckAt, type Frequency } from "@/lib/dates";
 import { rankCheck } from "@/lib/serprobot";
 import { toSerprobotRegion } from "@/lib/format-region";
 
@@ -93,7 +93,7 @@ export async function runKeywordCheck(keywordId: string): Promise<CheckOutcome> 
       bestPosition,
       currentRankingUrl: result.rankingUrl,
       lastCheckedAt: now,
-      nextCheckAt: addFrequency(now, keyword.frequency as Frequency),
+      nextCheckAt: getNextCheckAt(now, keyword.frequency as Frequency),
     })
     .where(eq(keywords.id, keyword.id));
 

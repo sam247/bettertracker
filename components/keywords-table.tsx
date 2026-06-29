@@ -12,11 +12,19 @@ import { PositionCell } from "@/components/position-cell";
 import { PositionSparkline } from "@/components/position-sparkline";
 import { RankingUrlCell } from "@/components/ranking-url-cell";
 import { KeywordActionsMenu } from "@/components/keyword-actions-menu";
+import { SortableTh } from "@/components/sortable-th";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { formatRelative, isDue } from "@/lib/dates";
 import { computeBaselineMovementStats, getMovement } from "@/lib/keyword-stats";
+import {
+  compareDate,
+  compareNumber,
+  compareText,
+  FREQUENCY_ORDER,
+  toggleSort,
+  type SortState,
+} from "@/lib/table-sort";
 import { cn, urlPath } from "@/lib/utils";
 import type { MovementTimelinePoint } from "@/lib/keyword-history";
 import type { Group, Keyword } from "@/lib/db/schema";
@@ -26,7 +34,28 @@ type KeywordRow = {
   group: Group;
 };
 
-type SortKey = "movement" | "position" | "lastChecked";
+type SortKey =
+  | "keyword"
+  | "position"
+  | "movement"
+  | "best"
+  | "trend"
+  | "rankingUrl"
+  | "group"
+  | "frequency"
+  | "lastChecked";
+
+const DEFAULT_DIRECTION: Record<SortKey, "asc" | "desc"> = {
+  keyword: "asc",
+  position: "asc",
+  movement: "desc",
+  best: "asc",
+  trend: "asc",
+  rankingUrl: "asc",
+  group: "asc",
+  frequency: "asc",
+  lastChecked: "desc",
+};
 
 export function KeywordsTable({
   projectId,
@@ -47,7 +76,10 @@ export function KeywordsTable({
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
-  const [sort, setSort] = useState<SortKey>("movement");
+  const [sort, setSort] = useState<SortState<SortKey>>({
+    key: "movement",
+    direction: "desc",
+  });
   const [checking, setChecking] = useState<string | null>(null);
 
   useAutoRefresh(checking !== null, 4000);
@@ -125,21 +157,58 @@ export function KeywordsTable({
     }
 
     return [...list].sort((a, b) => {
-      if (sort === "movement") {
-        const changeA = getMovement(a.keyword) ?? -Infinity;
-        const changeB = getMovement(b.keyword) ?? -Infinity;
-        return changeB - changeA;
+      const asc = sort.direction === "asc";
+
+      switch (sort.key) {
+        case "keyword":
+          return compareText(a.keyword.keyword, b.keyword.keyword, asc);
+        case "position":
+          return compareNumber(
+            a.keyword.currentPosition,
+            b.keyword.currentPosition,
+            asc,
+          );
+        case "movement":
+          return compareNumber(getMovement(a.keyword), getMovement(b.keyword), asc);
+        case "best":
+          return compareNumber(
+            a.keyword.bestPosition,
+            b.keyword.bestPosition,
+            asc,
+          );
+        case "trend": {
+          const historyA = positionHistory[a.keyword.id] ?? [];
+          const historyB = positionHistory[b.keyword.id] ?? [];
+          const trendA = historyA.at(-1) ?? a.keyword.currentPosition;
+          const trendB = historyB.at(-1) ?? b.keyword.currentPosition;
+          return compareNumber(trendA, trendB, asc);
+        }
+        case "rankingUrl":
+          return compareText(
+            a.keyword.currentRankingUrl ?? "",
+            b.keyword.currentRankingUrl ?? "",
+            asc,
+          );
+        case "group":
+          return compareText(a.group.name, b.group.name, asc);
+        case "frequency":
+          return compareNumber(
+            FREQUENCY_ORDER[a.keyword.frequency] ?? 99,
+            FREQUENCY_ORDER[b.keyword.frequency] ?? 99,
+            asc,
+            99,
+          );
+        case "lastChecked":
+          return compareDate(a.keyword.lastCheckedAt, b.keyword.lastCheckedAt, asc);
+        default:
+          return 0;
       }
-      if (sort === "position") {
-        const posA = a.keyword.currentPosition ?? 9999;
-        const posB = b.keyword.currentPosition ?? 9999;
-        return posA - posB;
-      }
-      const timeA = a.keyword.lastCheckedAt?.getTime() ?? 0;
-      const timeB = b.keyword.lastCheckedAt?.getTime() ?? 0;
-      return timeB - timeA;
     });
-  }, [rows, groupFilter, search, sort]);
+  }, [rows, groupFilter, search, sort, positionHistory]);
+
+  function handleSort(key: SortKey) {
+    setSort((current) => toggleSort(current, key, DEFAULT_DIRECTION[key]));
+  }
 
   const filteredIds = useMemo(
     () => new Set(filtered.map((r) => r.keyword.id)),
@@ -202,15 +271,6 @@ export function KeywordsTable({
             placeholder="Search keyword or URL…"
             className="w-48 shrink-0"
           />
-          <Select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-            className="shrink-0"
-          >
-            <option value="movement">Sort by movement</option>
-            <option value="position">Sort by position</option>
-            <option value="lastChecked">Sort by last checked</option>
-          </Select>
           <div className="shrink-0">
             <BulkActionsDialog
               projectId={projectId}
@@ -287,8 +347,8 @@ export function KeywordsTable({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-xs text-muted">
-                <th className="w-8 pb-2 pr-2 font-medium">
+              <tr className="border-b border-border text-left text-xs">
+                <th className="w-8 pb-2 pr-2 font-medium text-muted">
                   <input
                     type="checkbox"
                     checked={allFilteredSelected}
@@ -297,16 +357,85 @@ export function KeywordsTable({
                     className="rounded border-border"
                   />
                 </th>
-                <th className="pb-2 pr-4 font-medium">Keyword</th>
-                <th className="px-4 pb-2 font-medium text-center">Position</th>
-                <th className="px-4 pb-2 font-medium text-center">Movement</th>
-                <th className="px-4 pb-2 font-medium text-center">Best</th>
-                <th className="px-4 pb-2 font-medium text-center">Trend</th>
-                <th className="pb-2 pl-4 pr-6 font-medium text-left">Ranking URL</th>
-                <th className="pb-2 pr-4 font-medium">Group</th>
-                <th className="pb-2 pr-4 font-medium">Freq</th>
-                <th className="pb-2 pr-4 font-medium">Last</th>
-                <th className="pb-2 pr-2 font-medium text-right">Action</th>
+                <SortableTh
+                  label="Keyword"
+                  sortKey="keyword"
+                  activeKey={sort.key}
+                  direction={sort.direction}
+                  onSort={handleSort}
+                  className="pr-4"
+                />
+                <SortableTh
+                  label="Position"
+                  sortKey="position"
+                  activeKey={sort.key}
+                  direction={sort.direction}
+                  onSort={handleSort}
+                  align="center"
+                  className="px-4"
+                />
+                <SortableTh
+                  label="Movement"
+                  sortKey="movement"
+                  activeKey={sort.key}
+                  direction={sort.direction}
+                  onSort={handleSort}
+                  align="center"
+                  className="px-4"
+                />
+                <SortableTh
+                  label="Best"
+                  sortKey="best"
+                  activeKey={sort.key}
+                  direction={sort.direction}
+                  onSort={handleSort}
+                  align="center"
+                  className="px-4"
+                />
+                <SortableTh
+                  label="Trend"
+                  sortKey="trend"
+                  activeKey={sort.key}
+                  direction={sort.direction}
+                  onSort={handleSort}
+                  align="center"
+                  className="px-4"
+                />
+                <SortableTh
+                  label="Ranking URL"
+                  sortKey="rankingUrl"
+                  activeKey={sort.key}
+                  direction={sort.direction}
+                  onSort={handleSort}
+                  className="pl-4 pr-6"
+                />
+                <SortableTh
+                  label="Group"
+                  sortKey="group"
+                  activeKey={sort.key}
+                  direction={sort.direction}
+                  onSort={handleSort}
+                  className="pr-4"
+                />
+                <SortableTh
+                  label="Freq"
+                  sortKey="frequency"
+                  activeKey={sort.key}
+                  direction={sort.direction}
+                  onSort={handleSort}
+                  className="pr-4"
+                />
+                <SortableTh
+                  label="Last"
+                  sortKey="lastChecked"
+                  activeKey={sort.key}
+                  direction={sort.direction}
+                  onSort={handleSort}
+                  className="pr-4"
+                />
+                <th className="pb-2 pr-2 text-right font-medium text-muted">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody>

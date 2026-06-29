@@ -62,7 +62,7 @@ Sign in with `sampettiford@googlemail.com` and your `AUTH_PASSWORD`.
 1. Push to GitHub and import the repo in Vercel.
 2. Add the **Vercel Postgres** integration (sets `DATABASE_URL`).
 3. Add all other env vars from `.env.example`.
-4. Deploy — `vercel.json` configures an hourly cron at `/api/cron/run-checks`.
+4. Deploy — `vercel.json` configures an hourly cron at `/api/cron/run-checks` (runs at :01 past each hour UTC, aligned with 00:01 UK checks).
 5. Run `npm run db:push` against production `DATABASE_URL` once to create tables.
 
 ## Usage
@@ -71,7 +71,7 @@ Sign in with `sampettiford@googlemail.com` and your `AUTH_PASSWORD`.
 2. **Add keywords** — bulk paste one keyword per line, assign a group and check frequency.
 3. **Monitor rankings** — the table shows position, change, best position, and ranking URL.
 4. **Manual check** — click "Check" on any row to run an immediate Serprobot check (1 credit).
-5. **Automated checks** — the hourly cron processes due keywords (oldest first), retries recent failures.
+5. **Automated checks** — the hourly cron processes due keywords at 00:01 UK time (daily/weekly/monthly), oldest first, with retries for recent failures.
 
 ## API credits
 

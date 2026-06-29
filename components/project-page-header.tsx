@@ -44,18 +44,18 @@ export function ProjectPageHeader({
         </p>
       </div>
       <div className="flex flex-col items-end gap-2">
-        <KeywordStatsBar
-          stats={stats}
-          runningDue={runningDue}
-          onRunDueChecks={runDueChecks}
-          variant="inline"
-        />
         <Link
           href={`/projects/${projectId}?edit=true`}
           className="text-sm text-blue no-underline hover:underline"
         >
           Edit
         </Link>
+        <KeywordStatsBar
+          stats={stats}
+          runningDue={runningDue}
+          onRunDueChecks={runDueChecks}
+          variant="inline"
+        />
       </div>
     </div>
   );

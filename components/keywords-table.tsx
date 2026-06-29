@@ -156,27 +156,33 @@ export function KeywordsTable({
     <div className="space-y-4">
       <MovementGraph timeline={movementTimeline} stats={baselineStats} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center justify-between gap-4 border-b border-border pb-3">
+        <div className="flex items-center gap-3">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search keyword or URL…"
-            className="max-w-xs"
+            className="w-48 shrink-0"
           />
-          <Select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+          <Select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            className="shrink-0"
+          >
             <option value="movement">Sort by movement</option>
             <option value="position">Sort by position</option>
             <option value="lastChecked">Sort by last checked</option>
           </Select>
-          <BulkActionsDialog
-            projectId={projectId}
-            groups={groups}
-            selectedIds={[...selected]}
-            onClearSelection={clearSelection}
-          />
+          <div className="shrink-0">
+            <BulkActionsDialog
+              projectId={projectId}
+              groups={groups}
+              selectedIds={[...selected]}
+              onClearSelection={clearSelection}
+            />
+          </div>
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex shrink-0 gap-1">
           <button
             type="button"
             onClick={() => setGroupFilter("all")}

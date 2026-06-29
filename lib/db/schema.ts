@@ -14,7 +14,7 @@ export const projects = pgTable("projects", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   targetDomain: text("target_domain").notNull(),
-  region: text("region").notNull().default("www.google.co.uk"),
+  region: text("region").notNull().default("google.co.uk"),
   device: text("device").notNull().default("desktop"),
   archivedAt: timestamp("archived_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

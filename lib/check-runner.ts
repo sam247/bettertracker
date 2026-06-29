@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { keywords, projects, rankChecks } from "@/lib/db/schema";
 import { addFrequency, type Frequency } from "@/lib/dates";
 import { rankCheck } from "@/lib/serprobot";
+import { toSerprobotRegion } from "@/lib/format-region";
 
 export interface CheckOutcome {
   keywordId: string;
@@ -40,7 +41,7 @@ export async function runKeywordCheck(keywordId: string): Promise<CheckOutcome> 
   }
 
   const result = await rankCheck(
-    project.region,
+    toSerprobotRegion(project.region),
     keyword.keyword,
     project.targetDomain,
     project.device,

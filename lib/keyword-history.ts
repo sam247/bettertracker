@@ -127,3 +127,38 @@ export function buildMovementTimeline(
     };
   });
 }
+
+export function buildProjectAvgHistory(
+  rows: {
+    projectId: string;
+    position: number | null;
+    createdAt: Date | string;
+  }[],
+): Record<string, number[]> {
+  const byProject = new Map<string, Map<string, number[]>>();
+
+  for (const row of rows) {
+    if (row.position === null) continue;
+
+    const dates =
+      byProject.get(row.projectId) ?? new Map<string, number[]>();
+    const key = dateKey(row.createdAt);
+    const list = dates.get(key) ?? [];
+    list.push(row.position);
+    dates.set(key, list);
+    byProject.set(row.projectId, dates);
+  }
+
+  const result: Record<string, number[]> = {};
+
+  for (const [projectId, dateMap] of byProject) {
+    const sortedDates = [...dateMap.keys()].sort().slice(-10);
+    result[projectId] = sortedDates.map((date) => {
+      const positions = dateMap.get(date) ?? [];
+      const avg = positions.reduce((sum, pos) => sum + pos, 0) / positions.length;
+      return Math.round(avg * 10) / 10;
+    });
+  }
+
+  return result;
+}

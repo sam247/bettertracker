@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { formatRegionDisplay } from "@/lib/format-region";
 
 export function ProjectForm({ project }: { project?: {
   id: string;
@@ -16,7 +17,9 @@ export function ProjectForm({ project }: { project?: {
   const router = useRouter();
   const [name, setName] = useState(project?.name ?? "");
   const [targetDomain, setTargetDomain] = useState(project?.targetDomain ?? "");
-  const [region, setRegion] = useState(project?.region ?? "www.google.co.uk");
+  const [region, setRegion] = useState(
+    project?.region ? formatRegionDisplay(project.region) : "google.co.uk",
+  );
   const [device, setDevice] = useState(project?.device ?? "desktop");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,7 +70,7 @@ export function ProjectForm({ project }: { project?: {
         <Input
           value={region}
           onChange={(e) => setRegion(e.target.value)}
-          placeholder="www.google.co.uk"
+          placeholder="google.co.uk"
         />
       </div>
       <div>

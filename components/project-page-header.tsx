@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeywordStatsBar } from "@/components/keyword-stats-bar";
+import { formatRegionDisplay } from "@/lib/format-region";
 import { computeKeywordStats } from "@/lib/keyword-stats";
 import type { Keyword } from "@/lib/db/schema";
 
@@ -40,7 +41,8 @@ export function ProjectPageHeader({
       <div>
         <h1 className="text-xl font-medium">{project.name}</h1>
         <p className="mt-1 text-sm text-muted">
-          {project.targetDomain} · {project.region} · {project.device}
+          {project.targetDomain} · {formatRegionDisplay(project.region)} ·{" "}
+          {project.device}
         </p>
       </div>
       <div className="flex flex-col items-end gap-2">

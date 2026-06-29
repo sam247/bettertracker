@@ -1,8 +1,13 @@
 import Link from "next/link";
-import { desc, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { PositionSparkline } from "@/components/position-sparkline";
+import { ProjectMovementCell } from "@/components/project-movement-cell";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
-import { keywords, projects } from "@/lib/db/schema";
+import { keywords, projects, rankChecks } from "@/lib/db/schema";
+import { formatRegionDisplay } from "@/lib/format-region";
+import { buildProjectAvgHistory } from "@/lib/keyword-history";
+import { computeProjectKeywordStats } from "@/lib/project-stats";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +29,53 @@ export default async function ProjectsPage({
       keywords,
       sql`${keywords.projectId} = ${projects.id} AND ${keywords.deletedAt} IS NULL`,
     )
-    .where(showArchived ? sql`${projects.archivedAt} IS NOT NULL` : isNull(projects.archivedAt))
+    .where(
+      showArchived
+        ? sql`${projects.archivedAt} IS NOT NULL`
+        : isNull(projects.archivedAt),
+    )
     .groupBy(projects.id)
     .orderBy(desc(projects.createdAt));
+
+  const projectIds = rows.map((row) => row.project.id);
+
+  const keywordRows =
+    projectIds.length > 0
+      ? await db
+          .select()
+          .from(keywords)
+          .where(
+            and(isNull(keywords.deletedAt), inArray(keywords.projectId, projectIds)),
+          )
+      : [];
+
+  const keywordsByProject = new Map<string, typeof keywordRows>();
+  for (const keyword of keywordRows) {
+    const list = keywordsByProject.get(keyword.projectId) ?? [];
+    list.push(keyword);
+    keywordsByProject.set(keyword.projectId, list);
+  }
+
+  const historyRows =
+    projectIds.length > 0
+      ? await db
+          .select({
+            projectId: keywords.projectId,
+            position: rankChecks.position,
+            createdAt: rankChecks.createdAt,
+          })
+          .from(rankChecks)
+          .innerJoin(keywords, eq(rankChecks.keywordId, keywords.id))
+          .where(
+            and(
+              isNull(keywords.deletedAt),
+              eq(rankChecks.status, "success"),
+              inArray(keywords.projectId, projectIds),
+            ),
+          )
+      : [];
+
+  const trendByProject = buildProjectAvgHistory(historyRows);
 
   return (
     <div>
@@ -57,29 +106,51 @@ export default async function ProjectsPage({
               <th className="pb-2 pr-4 font-medium">Domain</th>
               <th className="pb-2 pr-4 font-medium">Region</th>
               <th className="pb-2 pr-4 font-medium text-right">Keywords</th>
+              <th className="pb-2 pr-4 font-medium">Trend</th>
+              <th className="pb-2 pr-4 font-medium text-right">Avg position</th>
+              <th className="pb-2 pr-4 font-medium text-right">Movement</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ project, keywordCount }) => (
-              <tr
-                key={project.id}
-                className="border-b border-border/50 hover:bg-surface/50"
-              >
-                <td className="py-3 pr-4">
-                  <Link
-                    href={`/projects/${project.id}`}
-                    className="font-medium no-underline hover:underline"
-                  >
-                    {project.name}
-                  </Link>
-                </td>
-                <td className="py-3 pr-4 text-muted">{project.targetDomain}</td>
-                <td className="py-3 pr-4 text-muted">{project.region}</td>
-                <td className="py-3 pr-4 text-right tabular-nums text-muted">
-                  {keywordCount}
-                </td>
-              </tr>
-            ))}
+            {rows.map(({ project, keywordCount }) => {
+              const projectKeywords = keywordsByProject.get(project.id) ?? [];
+              const stats = computeProjectKeywordStats(projectKeywords);
+              const trend = trendByProject[project.id] ?? [];
+
+              return (
+                <tr
+                  key={project.id}
+                  className="border-b border-border/50 hover:bg-surface/50"
+                >
+                  <td className="py-3 pr-4">
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="font-medium no-underline hover:underline"
+                    >
+                      {project.name}
+                    </Link>
+                  </td>
+                  <td className="py-3 pr-4 text-muted">{project.targetDomain}</td>
+                  <td className="py-3 pr-4 text-muted">
+                    {formatRegionDisplay(project.region)}
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums text-muted">
+                    {keywordCount}
+                  </td>
+                  <td className="py-3 pr-4">
+                    <PositionSparkline positions={trend} />
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums text-muted">
+                    {stats.avgPosition !== null
+                      ? `#${stats.avgPosition % 1 === 0 ? stats.avgPosition : stats.avgPosition.toFixed(1)}`
+                      : "—"}
+                  </td>
+                  <td className="py-3 pr-4 text-right">
+                    <ProjectMovementCell net={stats.netMovement} />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {rows.length === 0 && (

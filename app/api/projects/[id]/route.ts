@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { normalizeTargetDomain } from "@/lib/normalise-target-domain";
+import { normalizeRegionInput } from "@/lib/format-region";
 import { db } from "@/lib/db";
 import { projects } from "@/lib/db/schema";
 
@@ -38,7 +39,8 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (body.name !== undefined) updates.name = String(body.name).trim();
   if (body.targetDomain !== undefined)
     updates.targetDomain = normalizeTargetDomain(String(body.targetDomain));
-  if (body.region !== undefined) updates.region = String(body.region).trim();
+  if (body.region !== undefined)
+    updates.region = normalizeRegionInput(String(body.region));
   if (body.device !== undefined) updates.device = String(body.device).trim();
 
   const [project] = await db

@@ -11,11 +11,18 @@ import { MovementGraph } from "@/components/movement-graph";
 import { PositionCell } from "@/components/position-cell";
 import { PositionSparkline } from "@/components/position-sparkline";
 import { RankingUrlCell } from "@/components/ranking-url-cell";
+import { Spinner } from "@/components/spinner";
 import { KeywordActionsMenu } from "@/components/keyword-actions-menu";
 import { SortableTh } from "@/components/sortable-th";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatRelative, isDue } from "@/lib/dates";
+import {
+  CHECKING_ENDED,
+  CHECKING_STARTED,
+  dispatchCheckingEnded,
+  dispatchCheckingStarted,
+} from "@/lib/checking-events";
 import { computeBaselineMovementStats, getMovement } from "@/lib/keyword-stats";
 import {
   compareDate,
@@ -80,9 +87,21 @@ export function KeywordsTable({
     key: "movement",
     direction: "desc",
   });
-  const [checking, setChecking] = useState<string | null>(null);
+  const [checkingIds, setCheckingIds] = useState<Set<string>>(new Set());
 
-  useAutoRefresh(checking !== null, 4000);
+  function addChecking(ids: string[]) {
+    setCheckingIds((prev) => new Set([...prev, ...ids]));
+  }
+
+  function removeChecking(ids: string[]) {
+    setCheckingIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) next.delete(id);
+      return next;
+    });
+  }
+
+  useAutoRefresh(checkingIds.size > 0, 4000);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detailId, setDetailId] = useState<string | null>(null);
   const detailRow = detailId
@@ -106,19 +125,39 @@ export function KeywordsTable({
     async function onCheckSelected() {
       const ids = [...selected];
       if (ids.length === 0) return;
-      await fetch(`/api/projects/${projectId}/keywords/bulk-check`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
-      router.refresh();
+      const batchIds = ids.slice(0, 5);
+      dispatchCheckingStarted(batchIds);
+      try {
+        await fetch(`/api/projects/${projectId}/keywords/bulk-check`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: batchIds }),
+        });
+        router.refresh();
+      } finally {
+        dispatchCheckingEnded(batchIds);
+      }
+    }
+
+    function onCheckingStarted(event: Event) {
+      const ids = (event as CustomEvent<{ ids: string[] }>).detail.ids;
+      addChecking(ids);
+    }
+
+    function onCheckingEnded(event: Event) {
+      const ids = (event as CustomEvent<{ ids: string[] }>).detail.ids;
+      removeChecking(ids);
     }
 
     window.addEventListener("bettertracker:import-keywords", onImportKeywords);
     window.addEventListener("bettertracker:check-selected", onCheckSelected);
+    window.addEventListener(CHECKING_STARTED, onCheckingStarted);
+    window.addEventListener(CHECKING_ENDED, onCheckingEnded);
     return () => {
       window.removeEventListener("bettertracker:import-keywords", onImportKeywords);
       window.removeEventListener("bettertracker:check-selected", onCheckSelected);
+      window.removeEventListener(CHECKING_STARTED, onCheckingStarted);
+      window.removeEventListener(CHECKING_ENDED, onCheckingEnded);
     };
   }, [projectId, router, selected]);
 
@@ -249,10 +288,13 @@ export function KeywordsTable({
 
   async function checkNow(id: string, e?: React.MouseEvent) {
     e?.stopPropagation();
-    setChecking(id);
-    await fetch(`/api/keywords/${id}/check`, { method: "POST" });
-    setChecking(null);
-    router.refresh();
+    dispatchCheckingStarted([id]);
+    try {
+      await fetch(`/api/keywords/${id}/check`, { method: "POST" });
+      router.refresh();
+    } finally {
+      dispatchCheckingEnded([id]);
+    }
   }
 
   function openDetail(row: KeywordRow) {
@@ -445,6 +487,8 @@ export function KeywordsTable({
                 const isSelected = selected.has(keyword.id);
                 const history = positionHistory[keyword.id] ?? [];
 
+                const isChecking = checkingIds.has(keyword.id);
+
                 return (
                   <tr
                     key={keyword.id}
@@ -473,24 +517,37 @@ export function KeywordsTable({
                     <td className="px-4 py-2.5 text-center">
                       <PositionCell
                         position={keyword.currentPosition}
-                        checking={checking === keyword.id}
+                        checking={isChecking}
                       />
                     </td>
                     <td className="px-4 py-2.5 text-center">
-                      <ChangeCell keyword={keyword} />
+                      <ChangeCell keyword={keyword} checking={isChecking} />
                     </td>
                     <td className="px-4 py-2.5 text-center tabular-nums text-xs text-muted">
-                      {keyword.bestPosition !== null
-                        ? keyword.bestPosition
-                        : "—"}
+                      {isChecking && keyword.bestPosition === null ? (
+                        <span className="inline-flex justify-center text-muted">
+                          <Spinner className="h-3.5 w-3.5" />
+                        </span>
+                      ) : keyword.bestPosition !== null ? (
+                        keyword.bestPosition
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex justify-center">
-                        <PositionSparkline positions={history} />
+                        {isChecking && history.length === 0 ? (
+                          <Spinner className="h-3.5 w-3.5 text-muted" />
+                        ) : (
+                          <PositionSparkline positions={history} />
+                        )}
                       </div>
                     </td>
                     <td className="py-2.5 pl-4 pr-6 text-left">
-                      <RankingUrlCell url={keyword.currentRankingUrl} />
+                      <RankingUrlCell
+                        url={keyword.currentRankingUrl}
+                        checking={isChecking}
+                      />
                     </td>
                     <td className="py-2.5 pr-4 text-xs text-muted">
                       {group.name}
@@ -513,7 +570,7 @@ export function KeywordsTable({
                       <div className="flex justify-end">
                         <KeywordActionsMenu
                           keyword={keyword}
-                          checking={checking === keyword.id}
+                          checking={isChecking}
                           onCheck={() => checkNow(keyword.id)}
                         />
                       </div>

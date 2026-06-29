@@ -1,12 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAutoRefresh } from "@/lib/use-auto-refresh";
 import { KeywordStatsBar } from "@/components/keyword-stats-bar";
 import { formatRegionDisplay } from "@/lib/format-region";
 import { computeKeywordStats } from "@/lib/keyword-stats";
+import { isDue } from "@/lib/dates";
+import {
+  dispatchCheckingEnded,
+  dispatchCheckingStarted,
+  RUN_DUE_CHECKS,
+} from "@/lib/checking-events";
 import type { Keyword } from "@/lib/db/schema";
 
 export function ProjectPageHeader({
@@ -30,14 +36,35 @@ export function ProjectPageHeader({
 
   const stats = useMemo(() => computeKeywordStats(keywords), [keywords]);
 
-  async function runDueChecks() {
+  const runDueChecks = useCallback(async () => {
+    const dueIds = keywords
+      .filter((k) => k.enabled && isDue(k.nextCheckAt))
+      .map((k) => k.id);
+    const batchIds = dueIds.slice(0, 5);
+
+    if (batchIds.length === 0) return;
+
+    dispatchCheckingStarted(batchIds);
     setRunningDue(true);
-    await fetch(`/api/projects/${projectId}/run-due-checks`, {
-      method: "POST",
-    });
-    setRunningDue(false);
-    router.refresh();
-  }
+    try {
+      await fetch(`/api/projects/${projectId}/run-due-checks`, {
+        method: "POST",
+      });
+      router.refresh();
+    } finally {
+      dispatchCheckingEnded(batchIds);
+      setRunningDue(false);
+    }
+  }, [keywords, projectId, router]);
+
+  useEffect(() => {
+    function onRunDueChecks() {
+      void runDueChecks();
+    }
+
+    window.addEventListener(RUN_DUE_CHECKS, onRunDueChecks);
+    return () => window.removeEventListener(RUN_DUE_CHECKS, onRunDueChecks);
+  }, [runDueChecks]);
 
   return (
     <div className="mb-8 flex flex-wrap items-start justify-between gap-6">

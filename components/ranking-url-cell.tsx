@@ -1,6 +1,21 @@
 import { urlPath } from "@/lib/utils";
+import { Spinner } from "@/components/spinner";
 
-export function RankingUrlCell({ url }: { url: string | null }) {
+export function RankingUrlCell({
+  url,
+  checking = false,
+}: {
+  url: string | null;
+  checking?: boolean;
+}) {
+  if (checking && !url) {
+    return (
+      <span className="inline-flex text-muted">
+        <Spinner className="h-3.5 w-3.5" />
+      </span>
+    );
+  }
+
   if (!url) {
     return <span className="text-xs text-muted">—</span>;
   }

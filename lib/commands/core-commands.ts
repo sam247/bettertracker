@@ -68,13 +68,7 @@ registerCommandProvider((ctx): CommandDefinition[] => [
     hint: "↵",
     keywords: ["check", "due", "cron"],
     visible: (c) => !!c.projectId,
-    run: async (c) => {
-      if (!c.projectId) return;
-      await fetch(`/api/projects/${c.projectId}/run-due-checks`, {
-        method: "POST",
-      });
-      c.router.refresh();
-    },
+    run: () => dispatch("bettertracker:run-due-checks"),
   },
   {
     id: "action:check-selected",

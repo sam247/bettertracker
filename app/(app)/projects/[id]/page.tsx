@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { ArchiveProjectButton } from "@/components/archive-project-button";
 import { DeleteProjectButton } from "@/components/delete-project-button";
+import { GroupsManager } from "@/components/groups-manager";
 import { KeywordsTable } from "@/components/keywords-table";
 import { ProjectForm } from "@/components/project-form";
 import { ProjectPageHeader } from "@/components/project-page-header";
@@ -78,6 +79,9 @@ export default async function ProjectPage({
       <div>
         <h1 className="mb-8 text-xl font-medium">Edit project</h1>
         <ProjectForm project={project} />
+        <div className="mt-8 border-t border-border pt-8">
+          <GroupsManager projectId={project.id} groups={groupRows} />
+        </div>
         <div className="mt-8 space-y-6 border-t border-border pt-8">
           <div>
             <h2 className="mb-2 text-sm font-medium">Archive</h2>

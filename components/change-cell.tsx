@@ -1,7 +1,22 @@
+import { Spinner } from "@/components/spinner";
 import { getMovement } from "@/lib/keyword-stats";
 import type { Keyword } from "@/lib/db/schema";
 
-export function ChangeCell({ keyword }: { keyword: Keyword }) {
+export function ChangeCell({
+  keyword,
+  checking = false,
+}: {
+  keyword: Keyword;
+  checking?: boolean;
+}) {
+  if (checking) {
+    return (
+      <span className="inline-flex items-center justify-center text-muted">
+        <Spinner className="h-3.5 w-3.5" />
+      </span>
+    );
+  }
+
   const movement = getMovement(keyword);
 
   if (movement === null || movement === 0) {

@@ -6,7 +6,7 @@ import { normalizeTargetDomain } from "@/lib/normalise-target-domain";
 import { normalizeRegionInput } from "@/lib/format-region";
 import { groups, keywords, projects } from "@/lib/db/schema";
 
-const DEFAULT_GROUPS = ["Core", "Locations", "Blog"];
+const DEFAULT_GROUPS = ["Default"];
 
 export async function GET(request: Request) {
   if (!(await requireAuth())) {

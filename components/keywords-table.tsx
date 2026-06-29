@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAutoRefresh } from "@/lib/use-auto-refresh";
 import { BulkActionsDialog } from "@/components/bulk-actions-dialog";
 import { ChangeCell } from "@/components/change-cell";
@@ -44,6 +44,7 @@ export function KeywordsTable({
   movementTimeline: MovementTimelinePoint[];
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
   const [sort, setSort] = useState<SortKey>("movement");
@@ -55,6 +56,39 @@ export function KeywordsTable({
   const detailRow = detailId
     ? rows.find((r) => r.keyword.id === detailId) ?? null
     : null;
+
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
+
+  useEffect(() => {
+    const keywordId = searchParams.get("keyword");
+    if (keywordId && rows.some((r) => r.keyword.id === keywordId)) {
+      setDetailId(keywordId);
+    }
+  }, [searchParams, rows]);
+
+  useEffect(() => {
+    function onImportKeywords() {
+      setBulkAddOpen(true);
+    }
+
+    async function onCheckSelected() {
+      const ids = [...selected];
+      if (ids.length === 0) return;
+      await fetch(`/api/projects/${projectId}/keywords/bulk-check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      router.refresh();
+    }
+
+    window.addEventListener("bettertracker:import-keywords", onImportKeywords);
+    window.addEventListener("bettertracker:check-selected", onCheckSelected);
+    return () => {
+      window.removeEventListener("bettertracker:import-keywords", onImportKeywords);
+      window.removeEventListener("bettertracker:check-selected", onCheckSelected);
+    };
+  }, [projectId, router, selected]);
 
   const baselineStats = useMemo(
     () =>
@@ -183,6 +217,8 @@ export function KeywordsTable({
               groups={groups}
               selectedIds={[...selected]}
               onClearSelection={clearSelection}
+              open={bulkAddOpen}
+              onOpenChange={setBulkAddOpen}
             />
           </div>
         </div>

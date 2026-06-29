@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -16,6 +16,8 @@ export function BulkActionsDialog({
   onClearSelection,
   variant = "button",
   triggerLabel,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   projectId: string;
   groups: { id: string; name: string }[];
@@ -23,9 +25,17 @@ export function BulkActionsDialog({
   onClearSelection?: () => void;
   variant?: "button" | "inline";
   triggerLabel?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+
+  function setOpen(next: boolean) {
+    if (onOpenChange) onOpenChange(next);
+    else setInternalOpen(next);
+  }
   const [tab, setTab] = useState<Tab>(selectedIds.length > 0 ? "manage" : "add");
   const [bulk, setBulk] = useState("");
   const [groupId, setGroupId] = useState(groups[0]?.id ?? "");
@@ -39,6 +49,13 @@ export function BulkActionsDialog({
     setBulk("");
     setTab(selectedIds.length > 0 ? "manage" : "add");
   }
+
+  useEffect(() => {
+    if (controlledOpen) {
+      setTab("add");
+      setMessage("");
+    }
+  }, [controlledOpen]);
 
   function openDialog() {
     setTab(

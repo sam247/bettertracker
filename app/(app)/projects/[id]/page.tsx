@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ArchiveProjectButton } from "@/components/archive-project-button";
 import { DeleteProjectButton } from "@/components/delete-project-button";
 import { KeywordsTable } from "@/components/keywords-table";
@@ -109,14 +110,20 @@ export default async function ProjectPage({
         keywords={rows.map((r) => r.keyword)}
       />
 
-      <KeywordsTable
-        projectId={id}
-        rows={rows}
-        groups={groupRows}
-        positionHistory={positionHistory}
-        baselinePositions={baselinePositions}
-        movementTimeline={movementTimeline}
-      />
+      <Suspense
+        fallback={
+          <div className="py-12 text-center text-sm text-muted">Loading…</div>
+        }
+      >
+        <KeywordsTable
+          projectId={id}
+          rows={rows}
+          groups={groupRows}
+          positionHistory={positionHistory}
+          baselinePositions={baselinePositions}
+          movementTimeline={movementTimeline}
+        />
+      </Suspense>
     </div>
   );
 }

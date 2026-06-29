@@ -16,11 +16,23 @@ interface CreditsData {
 export function CreditsPanel() {
   const [data, setData] = useState<CreditsData | null>(null);
 
-  useEffect(() => {
+  function loadCredits() {
     fetch("/api/credits")
       .then((r) => r.json())
       .then(setData)
       .catch(() => null);
+  }
+
+  useEffect(() => {
+    loadCredits();
+
+    function onRefresh() {
+      loadCredits();
+    }
+
+    window.addEventListener("bettertracker:refresh-credits", onRefresh);
+    return () =>
+      window.removeEventListener("bettertracker:refresh-credits", onRefresh);
   }, []);
 
   if (!data) {

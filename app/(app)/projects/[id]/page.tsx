@@ -74,13 +74,24 @@ export default async function ProjectPage({
       .map((r) => r.keyword.id),
   );
 
+  const keywordCountByGroup = Object.fromEntries(
+    groupRows.map((group) => [
+      group.id,
+      rows.filter((row) => row.group.id === group.id).length,
+    ]),
+  );
+
   if (edit === "true") {
     return (
       <div>
         <h1 className="mb-8 text-xl font-medium">Edit project</h1>
         <ProjectForm project={project} />
         <div className="mt-8 border-t border-border pt-8">
-          <GroupsManager projectId={project.id} groups={groupRows} />
+          <GroupsManager
+            projectId={project.id}
+            groups={groupRows}
+            keywordCounts={keywordCountByGroup}
+          />
         </div>
         <div className="mt-8 space-y-6 border-t border-border pt-8">
           <div>

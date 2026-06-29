@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useChecking } from "@/components/checking-context";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +30,7 @@ export function BulkActionsDialog({
   onOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const { startChecking, stopChecking } = useChecking();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
 
@@ -88,22 +90,28 @@ export function BulkActionsDialog({
         return;
       }
 
+      const createdIds: string[] = (data.created ?? []).map(
+        (k: { id: string }) => k.id,
+      );
       const skipped =
         data.skipped?.length > 0
           ? ` (${data.skipped.length} duplicates skipped)`
           : "";
-      setMessage(
-        `Added ${data.created.length} keywords${skipped}. Checks queued — use Run Due Checks.`,
-      );
+      setMessage(`Added ${data.created.length} keywords${skipped}. Running checks…`);
       setBulk("");
-      setLoading(false);
       router.refresh();
+      setTimeout(close, 1500);
 
-      void fetch(`/api/projects/${projectId}/run-due-checks`, {
-        method: "POST",
-      }).then(() => router.refresh());
+      if (createdIds.length > 0) {
+        startChecking(createdIds);
+        fetch(`/api/projects/${projectId}/run-due-checks`, {
+          method: "POST",
+        })
+          .then(() => router.refresh())
+          .finally(() => stopChecking(createdIds));
+      }
 
-      setTimeout(close, 2000);
+      setLoading(false);
     } catch {
       setMessage("Request failed — try again");
       setLoading(false);
@@ -197,25 +205,31 @@ export function BulkActionsDialog({
 
     setLoading(true);
     setMessage("Running rank checks…");
+    const batchIds = selectedIds.slice(0, 5);
+    startChecking(batchIds);
 
-    const res = await fetch(`/api/projects/${projectId}/keywords/bulk-check`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: selectedIds }),
-    });
+    try {
+      const res = await fetch(`/api/projects/${projectId}/keywords/bulk-check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: batchIds }),
+      });
 
-    const data = await res.json();
-    setLoading(false);
+      const data = await res.json();
 
-    if (!res.ok) {
-      setMessage(data.error ?? "Check failed");
-      return;
+      if (!res.ok) {
+        setMessage(data.error ?? "Check failed");
+        return;
+      }
+
+      setMessage(`Checked ${data.checked} (${data.succeeded} succeeded)`);
+      onClearSelection?.();
+      router.refresh();
+      setTimeout(close, 1500);
+    } finally {
+      stopChecking(batchIds);
+      setLoading(false);
     }
-
-    setMessage(`Checked ${data.checked} (${data.succeeded} succeeded)`);
-    onClearSelection?.();
-    router.refresh();
-    setTimeout(close, 1500);
   }
 
   if (!open) {

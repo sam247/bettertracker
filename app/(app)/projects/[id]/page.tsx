@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { ArchiveProjectButton } from "@/components/archive-project-button";
-import { BulkKeywordDialog } from "@/components/bulk-keyword-dialog";
 import { KeywordsTable } from "@/components/keywords-table";
 import { ProjectForm } from "@/components/project-form";
 import { db } from "@/lib/db";
@@ -72,11 +71,10 @@ export default async function ProjectPage({
           >
             Edit
           </Link>
-          <BulkKeywordDialog projectId={id} groups={groupRows} />
         </div>
       </div>
 
-      <KeywordsTable rows={rows} groups={groupRows} />
+      <KeywordsTable projectId={id} rows={rows} groups={groupRows} />
     </div>
   );
 }

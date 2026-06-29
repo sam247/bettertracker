@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BulkActionsDialog } from "@/components/bulk-actions-dialog";
 import { ChangeCell } from "@/components/change-cell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +19,11 @@ type KeywordRow = {
 type SortKey = "movement" | "position" | "lastChecked";
 
 export function KeywordsTable({
+  projectId,
   rows,
   groups,
 }: {
+  projectId: string;
   rows: KeywordRow[];
   groups: Group[];
 }) {
@@ -29,6 +32,8 @@ export function KeywordsTable({
   const [groupFilter, setGroupFilter] = useState("all");
   const [sort, setSort] = useState<SortKey>("movement");
   const [checking, setChecking] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const filtered = useMemo(() => {
     let list = rows;
@@ -67,6 +72,43 @@ export function KeywordsTable({
     });
   }, [rows, groupFilter, search, sort]);
 
+  const filteredIds = useMemo(
+    () => new Set(filtered.map((r) => r.keyword.id)),
+    [filtered],
+  );
+
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((r) => selected.has(r.keyword.id));
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllFiltered() {
+    if (allFilteredSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (const id of filteredIds) next.delete(id);
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (const id of filteredIds) next.add(id);
+        return next;
+      });
+    }
+  }
+
+  function clearSelection() {
+    setSelected(new Set());
+  }
+
   async function checkNow(id: string) {
     setChecking(id);
     await fetch(`/api/keywords/${id}/check`, { method: "POST" });
@@ -86,6 +128,27 @@ export function KeywordsTable({
   async function deleteKeyword(id: string) {
     if (!confirm("Delete this keyword?")) return;
     await fetch(`/api/keywords/${id}`, { method: "DELETE" });
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    router.refresh();
+  }
+
+  async function deleteSelected() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} keyword${ids.length === 1 ? "" : "s"}?`)) return;
+
+    setBulkDeleting(true);
+    await fetch(`/api/projects/${projectId}/keywords/bulk-delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    setBulkDeleting(false);
+    clearSelection();
     router.refresh();
   }
 
@@ -112,7 +175,32 @@ export function KeywordsTable({
           <option value="position">Sort by position</option>
           <option value="lastChecked">Sort by last checked</option>
         </Select>
+        <BulkActionsDialog
+          projectId={projectId}
+          groups={groups}
+          selectedIds={[...selected]}
+          onClearSelection={clearSelection}
+        />
       </div>
+
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded border border-border bg-surface px-3 py-2 text-sm">
+          <span className="text-muted">
+            {selected.size} selected
+          </span>
+          <Button
+            size="sm"
+            variant="danger"
+            disabled={bulkDeleting}
+            onClick={deleteSelected}
+          >
+            {bulkDeleting ? "Deleting…" : "Delete selected"}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={clearSelection}>
+            Clear
+          </Button>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-1 border-b border-border pb-3">
         <button
@@ -148,6 +236,15 @@ export function KeywordsTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs text-muted">
+              <th className="pb-2 pr-2 font-medium w-8">
+                <input
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={toggleAllFiltered}
+                  aria-label="Select all visible keywords"
+                  className="rounded border-border"
+                />
+              </th>
               <th className="pb-2 pr-4 font-medium">Keyword</th>
               <th className="pb-2 pr-4 font-medium">Group</th>
               <th className="pb-2 pr-4 font-medium text-right">Current</th>
@@ -163,11 +260,24 @@ export function KeywordsTable({
           <tbody>
             {filtered.map(({ keyword, group }) => {
               const due = isDue(keyword.nextCheckAt);
+              const isSelected = selected.has(keyword.id);
               return (
                 <tr
                   key={keyword.id}
-                  className="border-b border-border/50 hover:bg-surface/50"
+                  className={cn(
+                    "border-b border-border/50 hover:bg-surface/50",
+                    isSelected && "bg-surface/30",
+                  )}
                 >
+                  <td className="py-2.5 pr-2">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleOne(keyword.id)}
+                      aria-label={`Select ${keyword.keyword}`}
+                      className="rounded border-border"
+                    />
+                  </td>
                   <td className="py-2.5 pr-4 font-medium">
                     {keyword.keyword}
                     {!keyword.enabled && (

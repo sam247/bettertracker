@@ -20,6 +20,7 @@ const POSITION_KEYS = [
 ];
 
 const URL_KEYS = [
+  "found_serp",
   "ranking_url",
   "found_url",
   "url",
@@ -277,12 +278,38 @@ async function findPositionViaSerps(
   return { position: null, rankingUrl: null };
 }
 
+function extractRankingUrlFromSerps(
+  serps: unknown,
+  targetDomain: string,
+  position: number | null,
+): string | null {
+  if (!Array.isArray(serps)) return null;
+
+  if (position !== null && position > 0 && position <= serps.length) {
+    const atPosition = String(serps[position - 1] ?? "");
+    if (atPosition.toLowerCase().includes(targetDomain)) {
+      return resolveRankingUrl(atPosition, targetDomain);
+    }
+  }
+
+  for (const entry of serps) {
+    const url = String(entry ?? "");
+    if (url.toLowerCase().includes(targetDomain)) {
+      return resolveRankingUrl(url, targetDomain);
+    }
+  }
+
+  return null;
+}
+
 function parseRankCheckData(
   data: Record<string, unknown>,
   targetDomain: string,
 ): { position: number | null; rankingUrl: string | null; pending: boolean } {
   const position = extractPositionForTarget(data, targetDomain);
-  const rankingUrl = extractRankingUrl(data, targetDomain);
+  const rankingUrl =
+    extractRankingUrl(data, targetDomain) ??
+    extractRankingUrlFromSerps(data.serps, targetDomain, position);
 
   if (position !== null || isTerminalNotFound(data)) {
     return { position, rankingUrl, pending: false };

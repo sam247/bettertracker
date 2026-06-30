@@ -5,6 +5,8 @@ import {
   runKeywordCheck,
 } from "@/lib/check-runner";
 
+export const maxDuration = 300;
+
 export async function GET() {
   const batchSize = parseInt(process.env.CRON_BATCH_SIZE ?? "20", 10);
   const due = await getDueKeywords(batchSize);

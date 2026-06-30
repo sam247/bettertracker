@@ -100,6 +100,15 @@ export async function runKeywordCheck(keywordId: string): Promise<CheckOutcome> 
   return { keywordId, success: true, position: newPosition, error: null };
 }
 
+export async function runKeywordChecks(keywordIds: string[]) {
+  const results: CheckOutcome[] = [];
+  for (const keywordId of keywordIds) {
+    results.push(await runKeywordCheck(keywordId));
+  }
+  const succeeded = results.filter((r) => r.success).length;
+  return { results, checked: results.length, succeeded, failed: results.length - succeeded };
+}
+
 export async function getDueKeywords(limit: number) {
   const now = new Date();
   const rows = await db

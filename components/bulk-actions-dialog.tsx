@@ -205,14 +205,13 @@ export function BulkActionsDialog({
 
     setLoading(true);
     setMessage("Running rank checks…");
-    const batchIds = selectedIds.slice(0, 5);
-    startChecking(batchIds);
+    startChecking(selectedIds);
 
     try {
       const res = await fetch(`/api/projects/${projectId}/keywords/bulk-check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: batchIds }),
+        body: JSON.stringify({ ids: selectedIds }),
       });
 
       const data = await res.json();
@@ -227,7 +226,7 @@ export function BulkActionsDialog({
       router.refresh();
       setTimeout(close, 1500);
     } finally {
-      stopChecking(batchIds);
+      stopChecking(selectedIds);
       setLoading(false);
     }
   }

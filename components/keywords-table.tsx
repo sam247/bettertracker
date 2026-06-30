@@ -103,18 +103,18 @@ export function KeywordsTable({
     }
 
     async function onCheckSelected() {
-      const batchIds = [...selected].slice(0, 5);
-      if (batchIds.length === 0) return;
-      startChecking(batchIds);
+      const ids = [...selected];
+      if (ids.length === 0) return;
+      startChecking(ids);
       try {
         await fetch(`/api/projects/${projectId}/keywords/bulk-check`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: batchIds }),
+          body: JSON.stringify({ ids }),
         });
         router.refresh();
       } finally {
-        stopChecking(batchIds);
+        stopChecking(ids);
       }
     }
 

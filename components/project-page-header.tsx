@@ -41,19 +41,10 @@ export function ProjectPageHeader({
     startChecking(dueIds);
     setRunningDue(true);
     try {
-      let remaining = dueIds.length;
-      while (remaining > 0) {
-        const res = await fetch(`/api/projects/${projectId}/run-due-checks`, {
-          method: "POST",
-        });
-        const data = (await res.json()) as {
-          checked: number;
-          remaining: number;
-        };
-        if (!res.ok || data.checked === 0) break;
-        remaining = data.remaining;
-        router.refresh();
-      }
+      await fetch(`/api/projects/${projectId}/run-due-checks`, {
+        method: "POST",
+      });
+      router.refresh();
     } finally {
       stopChecking(dueIds);
       setRunningDue(false);

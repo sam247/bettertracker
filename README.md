@@ -34,7 +34,7 @@ vercel env pull .env.local
 | `AUTH_PASSWORD` | Your login password |
 | `CRON_SECRET` | Random string for cron auth |
 | `SERPROBOT_API_KEY` | From Serprobot account settings |
-| `CRON_BATCH_SIZE` | Keywords per cron run (default: 20) |
+| `CRON_BATCH_SIZE` | Keywords per **cron** run only (default: 20). Manual checks run all due keywords in one request. |
 
 ### 3. Database
 

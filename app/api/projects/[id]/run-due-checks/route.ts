@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
-import { runKeywordCheck } from "@/lib/check-runner";
+import { runKeywordChecks } from "@/lib/check-runner";
 import { isDue } from "@/lib/dates";
 import { db } from "@/lib/db";
 import { keywords, projects } from "@/lib/db/schema";
@@ -43,27 +43,32 @@ export async function POST(_request: Request, context: RouteContext) {
     )
     .orderBy(asc(keywords.keyword));
 
-  const due = rows
+  const dueIds = rows
     .filter((k) => isDue(k.nextCheckAt))
     .sort((a, b) => {
       const aTime = a.nextCheckAt?.getTime() ?? 0;
       const bTime = b.nextCheckAt?.getTime() ?? 0;
       return aTime - bTime;
+    })
+    .map((k) => k.id);
+
+  if (dueIds.length === 0) {
+    return NextResponse.json({
+      checked: 0,
+      succeeded: 0,
+      failed: 0,
+      remaining: 0,
+      results: [],
     });
-
-  const batchSize = parseInt(process.env.CRON_BATCH_SIZE ?? "20", 10);
-  const batch = due.slice(0, batchSize);
-
-  const results = [];
-  for (const keyword of batch) {
-    results.push(await runKeywordCheck(keyword.id));
   }
 
-  const succeeded = results.filter((r) => r.success).length;
+  const { results, checked, succeeded, failed } = await runKeywordChecks(dueIds);
+
   return NextResponse.json({
-    checked: results.length,
+    checked,
     succeeded,
-    remaining: Math.max(due.length - batch.length, 0),
+    failed,
+    remaining: 0,
     results,
   });
 }

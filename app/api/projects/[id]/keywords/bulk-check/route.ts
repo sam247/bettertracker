@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
-import { runKeywordCheck } from "@/lib/check-runner";
+import { runKeywordChecks } from "@/lib/check-runner";
 import { db } from "@/lib/db";
 import { keywords } from "@/lib/db/schema";
 
@@ -35,22 +35,15 @@ export async function POST(request: Request, context: RouteContext) {
       ),
     );
 
-  const batchSize = Math.min(
-    parseInt(process.env.CRON_BATCH_SIZE ?? "5", 10),
-    5,
-  );
-  const batch = rows.slice(0, batchSize);
+  const keywordIds = rows.map((row) => row.id);
+  const { results, checked, succeeded, failed } =
+    await runKeywordChecks(keywordIds);
 
-  const results = [];
-  for (const row of batch) {
-    results.push(await runKeywordCheck(row.id));
-  }
-
-  const succeeded = results.filter((r) => r.success).length;
   return NextResponse.json({
-    checked: results.length,
+    checked,
     succeeded,
-    remaining: Math.max(rows.length - batch.length, 0),
+    failed,
+    remaining: 0,
     results,
   });
 }

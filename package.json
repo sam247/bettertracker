@@ -12,7 +12,9 @@
     "lint": "eslint",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:consolidate-groups": "tsx scripts/consolidate-groups-to-default.ts"
+    "db:consolidate-groups": "tsx scripts/consolidate-groups-to-default.ts",
+    "db:align-schedules": "tsx scripts/align-daily-schedules.ts",
+    "db:reset-baselines": "tsx scripts/reset-baselines.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",

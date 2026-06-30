@@ -51,10 +51,7 @@ export async function POST(_request: Request, context: RouteContext) {
       return aTime - bTime;
     });
 
-  const batchSize = Math.min(
-    parseInt(process.env.CRON_BATCH_SIZE ?? "5", 10),
-    5,
-  );
+  const batchSize = parseInt(process.env.CRON_BATCH_SIZE ?? "20", 10);
   const batch = due.slice(0, batchSize);
 
   const results = [];

@@ -32,23 +32,32 @@ export function ProjectPageHeader({
   const stats = useMemo(() => computeKeywordStats(keywords), [keywords]);
 
   const runDueChecks = useCallback(async () => {
-    const batchIds = keywords
+    const dueIds = keywords
       .filter((k) => k.enabled && isDue(k.nextCheckAt))
-      .map((k) => k.id)
-      .slice(0, 5);
+      .map((k) => k.id);
 
-    if (batchIds.length === 0) return;
+    if (dueIds.length === 0) return;
 
-    startChecking(batchIds);
+    startChecking(dueIds);
     setRunningDue(true);
     try {
-      await fetch(`/api/projects/${projectId}/run-due-checks`, {
-        method: "POST",
-      });
-      router.refresh();
+      let remaining = dueIds.length;
+      while (remaining > 0) {
+        const res = await fetch(`/api/projects/${projectId}/run-due-checks`, {
+          method: "POST",
+        });
+        const data = (await res.json()) as {
+          checked: number;
+          remaining: number;
+        };
+        if (!res.ok || data.checked === 0) break;
+        remaining = data.remaining;
+        router.refresh();
+      }
     } finally {
-      stopChecking(batchIds);
+      stopChecking(dueIds);
       setRunningDue(false);
+      router.refresh();
     }
   }, [keywords, projectId, router, startChecking, stopChecking]);
 

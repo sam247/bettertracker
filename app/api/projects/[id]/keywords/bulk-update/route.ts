@@ -1,8 +1,8 @@
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { keywords } from "@/lib/db/schema";
+import { groups, keywords } from "@/lib/db/schema";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -22,7 +22,26 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const updates: Partial<typeof keywords.$inferInsert> = {};
-  if (body.groupId !== undefined) updates.groupId = String(body.groupId);
+
+  if (body.groupId !== undefined) {
+    const groupId = String(body.groupId).trim();
+    if (!groupId) {
+      return NextResponse.json({ error: "Group is required" }, { status: 400 });
+    }
+
+    const [group] = await db
+      .select({ id: groups.id })
+      .from(groups)
+      .where(and(eq(groups.id, groupId), eq(groups.projectId, projectId)))
+      .limit(1);
+
+    if (!group) {
+      return NextResponse.json({ error: "Group not found" }, { status: 404 });
+    }
+
+    updates.groupId = groupId;
+  }
+
   if (body.enabled !== undefined) updates.enabled = Boolean(body.enabled);
   if (body.frequency !== undefined) updates.frequency = String(body.frequency);
 
@@ -30,17 +49,21 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "No updates provided" }, { status: 400 });
   }
 
-  const result = await db
-    .update(keywords)
-    .set(updates)
-    .where(
-      and(
-        eq(keywords.projectId, projectId),
-        isNull(keywords.deletedAt),
-        inArray(keywords.id, ids),
-      ),
-    )
-    .returning({ id: keywords.id });
+  try {
+    const result = await db
+      .update(keywords)
+      .set(updates)
+      .where(
+        and(
+          eq(keywords.projectId, projectId),
+          isNull(keywords.deletedAt),
+          inArray(keywords.id, ids),
+        ),
+      )
+      .returning({ id: keywords.id });
 
-  return NextResponse.json({ updated: result.length });
+    return NextResponse.json({ updated: result.length });
+  } catch {
+    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+  }
 }

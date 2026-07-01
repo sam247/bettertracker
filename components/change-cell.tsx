@@ -25,15 +25,21 @@ export function ChangeCell({
 
   if (movement > 0) {
     return (
-      <span className="text-base font-semibold tabular-nums text-green">
-        ▲ +{movement}
+      <span className="inline-flex items-center gap-0.5 text-sm tabular-nums text-green">
+        <span className="text-[9px] leading-none" aria-hidden>
+          ▲
+        </span>
+        +{movement}
       </span>
     );
   }
 
   return (
-    <span className="text-base font-semibold tabular-nums text-red">
-      ▼ {movement}
+    <span className="inline-flex items-center gap-0.5 text-sm tabular-nums text-red">
+      <span className="text-[9px] leading-none" aria-hidden>
+        ▼
+      </span>
+      {movement}
     </span>
   );
 }

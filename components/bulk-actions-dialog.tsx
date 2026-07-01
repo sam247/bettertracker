@@ -41,9 +41,22 @@ export function BulkActionsDialog({
   const [tab, setTab] = useState<Tab>(selectedIds.length > 0 ? "manage" : "add");
   const [bulk, setBulk] = useState("");
   const [groupId, setGroupId] = useState(groups[0]?.id ?? "");
+  const [manageGroupId, setManageGroupId] = useState(groups[0]?.id ?? "");
   const [frequency, setFrequency] = useState("weekly");
+  const [manageFrequency, setManageFrequency] = useState("weekly");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (groups.length === 0) return;
+    const defaultId = groups[0].id;
+    setGroupId((current) =>
+      groups.some((g) => g.id === current) ? current : defaultId,
+    );
+    setManageGroupId((current) =>
+      groups.some((g) => g.id === current) ? current : defaultId,
+    );
+  }, [groups]);
 
   function close() {
     setOpen(false);
@@ -54,16 +67,16 @@ export function BulkActionsDialog({
 
   useEffect(() => {
     if (controlledOpen) {
-      setTab("add");
+      setTab(selectedIds.length > 0 ? "manage" : "add");
       setMessage("");
     }
-  }, [controlledOpen]);
+  }, [controlledOpen, selectedIds.length]);
 
   function openDialog() {
     setTab(
       triggerLabel
         ? "add"
-        : selectedIds.length > 0 && variant === "inline"
+        : selectedIds.length > 0
           ? "manage"
           : "add",
     );
@@ -170,33 +183,50 @@ export function BulkActionsDialog({
   }
 
   async function bulkUpdate(updates: Record<string, unknown>, label: string) {
-    if (selectedIds.length === 0) return;
+    if (selectedIds.length === 0) {
+      setMessage("No keywords selected");
+      return;
+    }
+
+    if (
+      updates.groupId !== undefined &&
+      (!updates.groupId || !groups.some((g) => g.id === updates.groupId))
+    ) {
+      setMessage("Select a valid group");
+      return;
+    }
+
     if (!confirm(`${label} for ${selectedIds.length} keyword(s)?`)) return;
 
     setLoading(true);
     setMessage("");
 
-    const res = await fetch(
-      `/api/projects/${projectId}/keywords/bulk-update`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedIds, ...updates }),
-      },
-    );
+    try {
+      const res = await fetch(
+        `/api/projects/${projectId}/keywords/bulk-update`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: selectedIds, ...updates }),
+        },
+      );
 
-    const data = await res.json();
-    setLoading(false);
+      const data = await res.json();
 
-    if (!res.ok) {
-      setMessage(data.error ?? "Update failed");
-      return;
+      if (!res.ok) {
+        setMessage(data.error ?? "Update failed");
+        return;
+      }
+
+      setMessage(`Updated ${data.updated} keywords`);
+      onClearSelection?.();
+      router.refresh();
+      setTimeout(close, 1200);
+    } catch {
+      setMessage("Request failed — try again");
+    } finally {
+      setLoading(false);
     }
-
-    setMessage(`Updated ${data.updated} keywords`);
-    onClearSelection?.();
-    router.refresh();
-    setTimeout(close, 1200);
   }
 
   async function bulkCheck() {
@@ -423,8 +453,8 @@ export function BulkActionsDialog({
               <label className="mb-1 block text-xs text-muted">Move to group</label>
               <div className="flex gap-2">
                 <Select
-                  value={groupId}
-                  onChange={(e) => setGroupId(e.target.value)}
+                  value={manageGroupId}
+                  onChange={(e) => setManageGroupId(e.target.value)}
                   className="flex-1"
                 >
                   {groups.map((g) => (
@@ -436,9 +466,9 @@ export function BulkActionsDialog({
                 <Button
                   type="button"
                   size="sm"
-                  disabled={loading}
+                  disabled={loading || groups.length === 0}
                   onClick={() =>
-                    bulkUpdate({ groupId }, "Move to group")
+                    bulkUpdate({ groupId: manageGroupId }, "Move to group")
                   }
                 >
                   Move
@@ -451,8 +481,8 @@ export function BulkActionsDialog({
               </label>
               <div className="flex gap-2">
                 <Select
-                  value={frequency}
-                  onChange={(e) => setFrequency(e.target.value)}
+                  value={manageFrequency}
+                  onChange={(e) => setManageFrequency(e.target.value)}
                   className="flex-1"
                 >
                   <option value="daily">Daily</option>
@@ -464,7 +494,7 @@ export function BulkActionsDialog({
                   size="sm"
                   disabled={loading}
                   onClick={() =>
-                    bulkUpdate({ frequency }, "Change frequency")
+                    bulkUpdate({ frequency: manageFrequency }, "Change frequency")
                   }
                 >
                   Apply

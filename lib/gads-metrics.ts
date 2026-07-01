@@ -1,7 +1,10 @@
 import type { GadsMetricsCache } from "@/lib/db/schema";
 
-/** Days before cached Google Ads metrics are considered stale. */
-export const GADS_METRICS_STALE_DAYS = 30;
+/** Days before cached Google Ads metrics are considered stale (default: 60). */
+export const GADS_METRICS_STALE_DAYS = parseInt(
+  process.env.GADS_METRICS_STALE_DAYS ?? "60",
+  10,
+);
 
 /** Keywords per Google Ads historical metrics request. */
 export const GADS_METRICS_BATCH_SIZE = 100;

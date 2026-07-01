@@ -2,11 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/run-checks",
-      "schedule": "1 * * * *"
+      "schedule": "1 0 * * *"
     },
     {
       "path": "/api/cron/refresh-volumes",
-      "schedule": "0 3 * * *"
+      "schedule": "0 3 1 * *"
     }
   ]
 }

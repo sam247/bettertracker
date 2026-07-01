@@ -382,15 +382,6 @@ export function KeywordsTable({
                   className="pr-4"
                 />
                 <SortableTh
-                  label="Volume"
-                  sortKey="volume"
-                  activeKey={sort.key}
-                  direction={sort.direction}
-                  onSort={handleSort}
-                  align="right"
-                  className="px-4"
-                />
-                <SortableTh
                   label="Position"
                   sortKey="position"
                   activeKey={sort.key}
@@ -415,6 +406,15 @@ export function KeywordsTable({
                   direction={sort.direction}
                   onSort={handleSort}
                   align="center"
+                  className="px-4"
+                />
+                <SortableTh
+                  label="Volume"
+                  sortKey="volume"
+                  activeKey={sort.key}
+                  direction={sort.direction}
+                  onSort={handleSort}
+                  align="right"
                   className="px-4"
                 />
                 <SortableTh
@@ -497,9 +497,6 @@ export function KeywordsTable({
                     <td className="max-w-[220px] py-2.5 pr-4 font-medium">
                       <span className="block truncate">{keyword.keyword}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <SearchVolumeCell keyword={keyword} />
-                    </td>
                     <td className="px-4 py-2.5 text-center">
                       <PositionCell
                         position={keyword.currentPosition}
@@ -519,6 +516,9 @@ export function KeywordsTable({
                       ) : (
                         "—"
                       )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <SearchVolumeCell keyword={keyword} />
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex justify-center">

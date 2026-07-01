@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
-import { isGoogleAdsConfigured } from "@/lib/google-ads-config";
-import { refreshProjectKeywordVolumes } from "@/lib/refresh-keyword-volumes";
+import { isGadsMcpConfigured } from "@/lib/gads-metrics";
+import { refreshProjectGadsMetricsIfStale } from "@/lib/refresh-gads-metrics";
 import { db } from "@/lib/db";
 import { projects } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -25,18 +25,18 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  if (!isGoogleAdsConfigured(project.gadsCustomerId)) {
+  if (!isGadsMcpConfigured()) {
     return NextResponse.json(
       {
         error:
-          "Google Ads is not configured. Set GOOGLE_ADS_DEVELOPER_TOKEN, GOOGLE_ADS_CLIENT_ID, GOOGLE_ADS_CLIENT_SECRET, GOOGLE_ADS_REFRESH_TOKEN, and GOOGLE_ADS_CUSTOMER_ID.",
+          "Google Ads MCP API is not configured. Set GADS_MCP_API_URL, GADS_MCP_API_SECRET, and GADS_DEFAULT_CUSTOMER_ID.",
       },
       { status: 503 },
     );
   }
 
   try {
-    const result = await refreshProjectKeywordVolumes(projectId);
+    const result = await refreshProjectGadsMetricsIfStale(projectId);
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Refresh failed";

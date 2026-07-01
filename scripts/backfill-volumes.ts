@@ -1,35 +1,33 @@
-import { and, eq, isNull } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { projects } from "@/lib/db/schema";
-import { isGoogleAdsConfigured } from "@/lib/google-ads-config";
-import { refreshProjectKeywordVolumes } from "@/lib/refresh-keyword-volumes";
+import { isGadsMcpConfigured } from "@/lib/gads-metrics";
+import { refreshStaleGadsMetrics } from "@/lib/refresh-gads-metrics";
 
 async function main() {
   const projectId = process.argv[2];
 
-  if (!isGoogleAdsConfigured()) {
+  if (!isGadsMcpConfigured()) {
     console.error(
-      "Google Ads is not configured. Set GOOGLE_ADS_* env vars first.",
+      "GADS MCP is not configured. Set GADS_MCP_API_URL, GADS_MCP_API_SECRET, and GADS_DEFAULT_CUSTOMER_ID.",
     );
     process.exit(1);
   }
 
-  const projectRows = projectId
-    ? await db.select().from(projects).where(eq(projects.id, projectId))
-    : await db.select().from(projects).where(isNull(projects.archivedAt));
+  let remaining = 1;
+  let totalUpdated = 0;
 
-  if (projectRows.length === 0) {
-    console.error("No projects found.");
-    process.exit(1);
-  }
-
-  for (const project of projectRows) {
-    console.log(`Refreshing volumes: ${project.name} (${project.id})`);
-    const result = await refreshProjectKeywordVolumes(project.id);
+  while (remaining > 0) {
+    const result = await refreshStaleGadsMetrics({
+      projectId,
+      limit: 200,
+    });
+    totalUpdated += result.updated;
+    remaining = result.remaining;
     console.log(
-      `  updated=${result.updated} skipped=${result.skipped} errors=${result.errors.length}`,
+      `batch processed=${result.processed} updated=${result.updated} failed=${result.failed} remaining=${result.remaining}`,
     );
+    if (result.processed === 0) break;
   }
+
+  console.log(`Done. Total updated: ${totalUpdated}`);
 }
 
 main().catch((error) => {

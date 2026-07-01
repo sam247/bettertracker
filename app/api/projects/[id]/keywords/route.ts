@@ -2,10 +2,8 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { groups, keywords, projects } from "@/lib/db/schema";
+import { groups, keywords } from "@/lib/db/schema";
 import { normaliseKeyword } from "@/lib/normalise-keyword";
-import { isGoogleAdsConfigured } from "@/lib/google-ads-config";
-import { refreshKeywordVolumesByIds } from "@/lib/refresh-keyword-volumes";
 
 export const maxDuration = 60;
 
@@ -96,26 +94,5 @@ export async function POST(request: Request, context: RouteContext) {
     }
   }
 
-  let volumesUpdated = 0;
-  if (created.length > 0) {
-    const [project] = await db
-      .select()
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1);
-
-    if (project && isGoogleAdsConfigured(project.gadsCustomerId)) {
-      try {
-        const volumeResult = await refreshKeywordVolumesByIds(
-          projectId,
-          created.map((row) => row.id),
-        );
-        volumesUpdated = volumeResult.updated;
-      } catch {
-        // Keyword creation should still succeed if volume lookup fails.
-      }
-    }
-  }
-
-  return NextResponse.json({ created, skipped, volumesUpdated }, { status: 201 });
+  return NextResponse.json({ created, skipped }, { status: 201 });
 }

@@ -414,7 +414,7 @@ export function KeywordsTable({
                   activeKey={sort.key}
                   direction={sort.direction}
                   onSort={handleSort}
-                  align="right"
+                  align="center"
                   className="px-4"
                 />
                 <SortableTh
@@ -517,7 +517,7 @@ export function KeywordsTable({
                         "—"
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-4 py-2.5 text-center">
                       <SearchVolumeCell keyword={keyword} />
                     </td>
                     <td className="px-4 py-2.5">

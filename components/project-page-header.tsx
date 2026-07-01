@@ -96,7 +96,7 @@ export function ProjectPageHeader({
               onClick={() => void refreshVolumes()}
               disabled={refreshingVolumes}
             >
-              {refreshingVolumes ? "Refreshing volumes…" : "Refresh volumes"}
+              {refreshingVolumes ? "Refreshing stale volumes…" : "Refresh stale volumes"}
             </Button>
           ) : null}
           <Link

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { formatRelative } from "@/lib/dates";
 import { formatSearchVolume } from "@/lib/format-search-volume";
+import { getKeywordCompetition } from "@/lib/gads-metrics";
 import type { Group, Keyword } from "@/lib/db/schema";
 import { urlPath } from "@/lib/utils";
 
@@ -153,9 +154,9 @@ export function KeywordDetailPanel({
                 <div className="tabular-nums">
                   {formatSearchVolume(keyword.searchVolume)}
                 </div>
-                {keyword.searchVolumeCompetition ? (
+                {getKeywordCompetition(keyword) ? (
                   <div className="text-xs text-muted">
-                    {keyword.searchVolumeCompetition} competition
+                    {getKeywordCompetition(keyword)} competition
                   </div>
                 ) : null}
                 {keyword.searchVolumeUpdatedAt ? (

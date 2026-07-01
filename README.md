@@ -35,11 +35,19 @@ vercel env pull .env.local
 | `CRON_SECRET` | Random string for cron auth |
 | `SERPROBOT_API_KEY` | From Serprobot account settings |
 | `CRON_BATCH_SIZE` | Keywords per **cron** run only (default: 20). Manual checks run all due keywords in one request. |
-| `GOOGLE_ADS_DEVELOPER_TOKEN` | Google Ads API developer token (Keyword Planner volumes) |
-| `GOOGLE_ADS_CLIENT_ID` | OAuth client ID for Google Ads |
-| `GOOGLE_ADS_CLIENT_SECRET` | OAuth client secret for Google Ads |
-| `GOOGLE_ADS_REFRESH_TOKEN` | OAuth refresh token with `adwords` scope |
-| `GOOGLE_ADS_CUSTOMER_ID` | Default Ads customer ID for volume lookups |
+| `GADS_MCP_API_URL` | Base URL of `br-gads-api` (mcp-hub) — no trailing slash |
+| `GADS_MCP_API_SECRET` | Shared secret matching `BR_GADS_API_SECRET` on the API server |
+| `GADS_DEFAULT_CUSTOMER_ID` | Default Google Ads customer ID (e.g. `6388433929`) |
+| `GADS_METRICS_CRON_BATCH_SIZE` | Keywords refreshed per volume cron run (default: 200) |
+
+Google Ads credentials live **only** on the `br-gads-api` server (mcp-hub). BetterTracker never calls Google directly.
+
+### Search volume caching
+
+- `searchVolume` and `searchVolumeUpdatedAt` are cached Keyword Planner metadata.
+- Refreshed when volume is missing or older than **30 days**.
+- Daily cron at 03:00 UTC processes stale keywords in batches (`/api/cron/refresh-volumes`).
+- Ranking checks (Serprobot) are completely separate and unchanged.
 
 ### 3. Database
 
@@ -74,10 +82,10 @@ Sign in with `sampettiford@googlemail.com` and your `AUTH_PASSWORD`.
 
 1. **Create a project** — set name, target domain, Google region, and device.
 2. **Add keywords** — bulk paste one keyword per line, assign a group and check frequency.
-3. **Monitor rankings** — the table shows position, change, best position, ranking URL, and search volume (when Google Ads is configured).
-4. **Refresh volumes** — click **Refresh volumes** on a project to pull Keyword Planner monthly searches for all keywords.
+3. **Monitor rankings** — position, movement, best, ranking URL, and cached search volume.
+4. **Search volume** — cached from Google Ads via `br-gads-api`; refreshes when missing or older than 30 days. Use **Refresh stale volumes** to force a server-side refresh for due keywords.
 5. **Manual check** — click "Check" on any row to run an immediate Serprobot check (1 credit).
-6. **Automated checks** — the hourly cron processes due keywords at 00:01 UK time (daily/weekly/monthly), oldest first, with retries for recent failures.
+6. **Automated checks** — hourly cron for rankings; daily cron for stale search volumes.
 
 ## API credits
 

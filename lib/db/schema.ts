@@ -3,12 +3,23 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
+/** Cached Google Ads Keyword Planner metrics (extensible JSON blob). */
+export type GadsMetricsCache = {
+  competition?: string | null;
+  competitionIndex?: number | null;
+  lowTopOfPageBidMicros?: number | null;
+  highTopOfPageBidMicros?: number | null;
+  averageCpcMicros?: number | null;
+  suggestedBidMicros?: number | null;
+};
 
 export const projects = pgTable("projects", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -50,8 +61,8 @@ export const keywords = pgTable(
     bestPosition: integer("best_position"),
     currentRankingUrl: text("current_ranking_url"),
     searchVolume: integer("search_volume"),
-    searchVolumeCompetition: text("search_volume_competition"),
     searchVolumeUpdatedAt: timestamp("search_volume_updated_at"),
+    gadsMetrics: jsonb("gads_metrics").$type<GadsMetricsCache | null>(),
     lastCheckedAt: timestamp("last_checked_at"),
     nextCheckAt: timestamp("next_check_at"),
     deletedAt: timestamp("deleted_at"),
@@ -64,6 +75,10 @@ export const keywords = pgTable(
     index("keywords_due_idx").on(
       table.enabled,
       table.nextCheckAt,
+      table.deletedAt,
+    ),
+    index("keywords_volume_refresh_idx").on(
+      table.searchVolumeUpdatedAt,
       table.deletedAt,
     ),
   ],

@@ -35,6 +35,11 @@ vercel env pull .env.local
 | `CRON_SECRET` | Random string for cron auth |
 | `SERPROBOT_API_KEY` | From Serprobot account settings |
 | `CRON_BATCH_SIZE` | Keywords per **cron** run only (default: 20). Manual checks run all due keywords in one request. |
+| `GOOGLE_ADS_DEVELOPER_TOKEN` | Google Ads API developer token (Keyword Planner volumes) |
+| `GOOGLE_ADS_CLIENT_ID` | OAuth client ID for Google Ads |
+| `GOOGLE_ADS_CLIENT_SECRET` | OAuth client secret for Google Ads |
+| `GOOGLE_ADS_REFRESH_TOKEN` | OAuth refresh token with `adwords` scope |
+| `GOOGLE_ADS_CUSTOMER_ID` | Default Ads customer ID for volume lookups |
 
 ### 3. Database
 
@@ -69,9 +74,10 @@ Sign in with `sampettiford@googlemail.com` and your `AUTH_PASSWORD`.
 
 1. **Create a project** — set name, target domain, Google region, and device.
 2. **Add keywords** — bulk paste one keyword per line, assign a group and check frequency.
-3. **Monitor rankings** — the table shows position, change, best position, and ranking URL.
-4. **Manual check** — click "Check" on any row to run an immediate Serprobot check (1 credit).
-5. **Automated checks** — the hourly cron processes due keywords at 00:01 UK time (daily/weekly/monthly), oldest first, with retries for recent failures.
+3. **Monitor rankings** — the table shows position, change, best position, ranking URL, and search volume (when Google Ads is configured).
+4. **Refresh volumes** — click **Refresh volumes** on a project to pull Keyword Planner monthly searches for all keywords.
+5. **Manual check** — click "Check" on any row to run an immediate Serprobot check (1 credit).
+6. **Automated checks** — the hourly cron processes due keywords at 00:01 UK time (daily/weekly/monthly), oldest first, with retries for recent failures.
 
 ## API credits
 

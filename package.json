@@ -14,7 +14,8 @@
     "db:studio": "drizzle-kit studio",
     "db:consolidate-groups": "tsx scripts/consolidate-groups-to-default.ts",
     "db:align-schedules": "tsx scripts/align-daily-schedules.ts",
-    "db:reset-baselines": "tsx scripts/reset-baselines.ts"
+    "db:reset-baselines": "tsx scripts/reset-baselines.ts",
+    "volumes:backfill": "tsx scripts/backfill-volumes.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",

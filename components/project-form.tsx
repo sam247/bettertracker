@@ -13,6 +13,7 @@ export function ProjectForm({ project }: { project?: {
   targetDomain: string;
   region: string;
   device: string;
+  gadsCustomerId?: string | null;
 } }) {
   const router = useRouter();
   const [name, setName] = useState(project?.name ?? "");
@@ -21,6 +22,9 @@ export function ProjectForm({ project }: { project?: {
     project?.region ? formatRegionDisplay(project.region) : "google.co.uk",
   );
   const [device, setDevice] = useState(project?.device ?? "desktop");
+  const [gadsCustomerId, setGadsCustomerId] = useState(
+    project?.gadsCustomerId ?? "",
+  );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -35,7 +39,7 @@ export function ProjectForm({ project }: { project?: {
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, targetDomain, region, device }),
+      body: JSON.stringify({ name, targetDomain, region, device, gadsCustomerId }),
     });
 
     if (!res.ok) {
@@ -80,6 +84,19 @@ export function ProjectForm({ project }: { project?: {
           <option value="mobile">Mobile</option>
           <option value="tablet">Tablet</option>
         </Select>
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-muted">
+          Google Ads customer ID
+        </label>
+        <Input
+          value={gadsCustomerId}
+          onChange={(e) => setGadsCustomerId(e.target.value)}
+          placeholder="6388433929 (optional — falls back to env default)"
+        />
+        <p className="mt-1 text-xs text-muted">
+          Used for Keyword Planner search volumes in this project&apos;s region.
+        </p>
       </div>
       {error && <p className="text-sm text-red">{error}</p>}
       <Button type="submit" disabled={loading}>

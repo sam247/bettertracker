@@ -5,6 +5,7 @@ import { DeleteProjectButton } from "@/components/delete-project-button";
 import { GroupsManager } from "@/components/groups-manager";
 import { KeywordsTable } from "@/components/keywords-table";
 import { ProjectForm } from "@/components/project-form";
+import { isGoogleAdsConfigured } from "@/lib/google-ads-config";
 import { ProjectPageHeader } from "@/components/project-page-header";
 import { notFound } from "next/navigation";
 import { and, asc, eq, isNull } from "drizzle-orm";
@@ -124,6 +125,7 @@ export default async function ProjectPage({
         projectId={id}
         project={project}
         keywords={rows.map((r) => r.keyword)}
+        volumesEnabled={isGoogleAdsConfigured(project.gadsCustomerId)}
       />
 
       <Suspense

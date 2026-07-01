@@ -42,6 +42,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (body.region !== undefined)
     updates.region = normalizeRegionInput(String(body.region));
   if (body.device !== undefined) updates.device = String(body.device).trim();
+  if (body.gadsCustomerId !== undefined) {
+    const value = String(body.gadsCustomerId).trim();
+    updates.gadsCustomerId = value || null;
+  }
 
   const [project] = await db
     .update(projects)

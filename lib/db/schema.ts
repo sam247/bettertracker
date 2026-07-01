@@ -16,6 +16,7 @@ export const projects = pgTable("projects", {
   targetDomain: text("target_domain").notNull(),
   region: text("region").notNull().default("google.co.uk"),
   device: text("device").notNull().default("desktop"),
+  gadsCustomerId: text("gads_customer_id"),
   archivedAt: timestamp("archived_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -48,6 +49,9 @@ export const keywords = pgTable(
     previousPosition: integer("previous_position"),
     bestPosition: integer("best_position"),
     currentRankingUrl: text("current_ranking_url"),
+    searchVolume: integer("search_volume"),
+    searchVolumeCompetition: text("search_volume_competition"),
+    searchVolumeUpdatedAt: timestamp("search_volume_updated_at"),
     lastCheckedAt: timestamp("last_checked_at"),
     nextCheckAt: timestamp("next_check_at"),
     deletedAt: timestamp("deleted_at"),

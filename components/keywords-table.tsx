@@ -11,6 +11,7 @@ import { MovementGraph } from "@/components/movement-graph";
 import { PositionCell } from "@/components/position-cell";
 import { PositionSparkline } from "@/components/position-sparkline";
 import { RankingUrlCell } from "@/components/ranking-url-cell";
+import { SearchVolumeCell } from "@/components/search-volume-cell";
 import { Spinner } from "@/components/spinner";
 import { KeywordActionsMenu } from "@/components/keyword-actions-menu";
 import { SortableTh } from "@/components/sortable-th";
@@ -37,6 +38,7 @@ type KeywordRow = {
 
 type SortKey =
   | "keyword"
+  | "volume"
   | "position"
   | "movement"
   | "best"
@@ -48,6 +50,7 @@ type SortKey =
 
 const DEFAULT_DIRECTION: Record<SortKey, "asc" | "desc"> = {
   keyword: "asc",
+  volume: "desc",
   position: "asc",
   movement: "desc",
   best: "asc",
@@ -166,6 +169,12 @@ export function KeywordsTable({
       switch (sort.key) {
         case "keyword":
           return compareText(a.keyword.keyword, b.keyword.keyword, asc);
+        case "volume":
+          return compareNumber(
+            a.keyword.searchVolume,
+            b.keyword.searchVolume,
+            asc,
+          );
         case "position":
           return compareNumber(
             a.keyword.currentPosition,
@@ -373,6 +382,15 @@ export function KeywordsTable({
                   className="pr-4"
                 />
                 <SortableTh
+                  label="Volume"
+                  sortKey="volume"
+                  activeKey={sort.key}
+                  direction={sort.direction}
+                  onSort={handleSort}
+                  align="right"
+                  className="px-4"
+                />
+                <SortableTh
                   label="Position"
                   sortKey="position"
                   activeKey={sort.key}
@@ -478,6 +496,9 @@ export function KeywordsTable({
                     </td>
                     <td className="max-w-[220px] py-2.5 pr-4 font-medium">
                       <span className="block truncate">{keyword.keyword}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <SearchVolumeCell keyword={keyword} />
                     </td>
                     <td className="px-4 py-2.5 text-center">
                       <PositionCell

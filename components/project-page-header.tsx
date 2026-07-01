@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeywordStatsBar } from "@/components/keyword-stats-bar";
 import { useChecking } from "@/components/checking-context";
+import { Button } from "@/components/ui/button";
 import { formatRegionDisplay } from "@/lib/format-region";
 import { computeKeywordStats } from "@/lib/keyword-stats";
 import { isDue } from "@/lib/dates";
@@ -15,6 +16,7 @@ export function ProjectPageHeader({
   projectId,
   project,
   keywords,
+  volumesEnabled = false,
 }: {
   projectId: string;
   project: {
@@ -22,11 +24,14 @@ export function ProjectPageHeader({
     targetDomain: string;
     region: string;
     device: string;
+    gadsCustomerId?: string | null;
   };
   keywords: Keyword[];
+  volumesEnabled?: boolean;
 }) {
   const router = useRouter();
   const [runningDue, setRunningDue] = useState(false);
+  const [refreshingVolumes, setRefreshingVolumes] = useState(false);
   const { startChecking, stopChecking } = useChecking();
 
   const stats = useMemo(() => computeKeywordStats(keywords), [keywords]);
@@ -61,6 +66,18 @@ export function ProjectPageHeader({
     return () => window.removeEventListener(RUN_DUE_CHECKS, onRunDueChecks);
   }, [runDueChecks]);
 
+  async function refreshVolumes() {
+    setRefreshingVolumes(true);
+    try {
+      await fetch(`/api/projects/${projectId}/refresh-volumes`, {
+        method: "POST",
+      });
+      router.refresh();
+    } finally {
+      setRefreshingVolumes(false);
+    }
+  }
+
   return (
     <div className="mb-8 flex flex-wrap items-start justify-between gap-6">
       <div>
@@ -71,12 +88,24 @@ export function ProjectPageHeader({
         </p>
       </div>
       <div className="flex flex-col items-end gap-2">
-        <Link
-          href={`/projects/${projectId}?edit=true`}
-          className="text-sm text-blue no-underline hover:underline"
-        >
-          Edit
-        </Link>
+        <div className="flex items-center gap-3">
+          {volumesEnabled ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => void refreshVolumes()}
+              disabled={refreshingVolumes}
+            >
+              {refreshingVolumes ? "Refreshing volumes…" : "Refresh volumes"}
+            </Button>
+          ) : null}
+          <Link
+            href={`/projects/${projectId}?edit=true`}
+            className="text-sm text-blue no-underline hover:underline"
+          >
+            Edit
+          </Link>
+        </div>
         <KeywordStatsBar
           stats={stats}
           runningDue={runningDue}

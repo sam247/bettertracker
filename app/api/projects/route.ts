@@ -47,6 +47,9 @@ export async function POST(request: Request) {
   const targetDomain = normalizeTargetDomain(String(body.targetDomain ?? ""));
   const region = normalizeRegionInput(String(body.region ?? "google.co.uk"));
   const device = String(body.device ?? "desktop").trim();
+  const gadsCustomerId = body.gadsCustomerId
+    ? String(body.gadsCustomerId).trim()
+    : null;
 
   if (!name || !targetDomain) {
     return NextResponse.json(
@@ -57,7 +60,7 @@ export async function POST(request: Request) {
 
   const [project] = await db
     .insert(projects)
-    .values({ name, targetDomain, region, device })
+    .values({ name, targetDomain, region, device, gadsCustomerId })
     .returning();
 
   const groupRows = await db

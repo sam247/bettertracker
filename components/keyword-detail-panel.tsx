@@ -10,6 +10,7 @@ import { RankingUrlCell } from "@/components/ranking-url-cell";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { formatRelative } from "@/lib/dates";
+import { formatSearchVolume } from "@/lib/format-search-volume";
 import type { Group, Keyword } from "@/lib/db/schema";
 import { urlPath } from "@/lib/utils";
 
@@ -144,6 +145,24 @@ export function KeywordDetailPanel({
                 {keyword.bestPosition !== null
                   ? keyword.bestPosition
                   : "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Search volume</dt>
+              <dd className="text-right">
+                <div className="tabular-nums">
+                  {formatSearchVolume(keyword.searchVolume)}
+                </div>
+                {keyword.searchVolumeCompetition ? (
+                  <div className="text-xs text-muted">
+                    {keyword.searchVolumeCompetition} competition
+                  </div>
+                ) : null}
+                {keyword.searchVolumeUpdatedAt ? (
+                  <div className="text-xs text-muted">
+                    Updated {formatRelative(keyword.searchVolumeUpdatedAt)}
+                  </div>
+                ) : null}
               </dd>
             </div>
             <div>

@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MovementTimelinePoint } from "@/lib/keyword-history";
 import type { BaselineMovementStats } from "@/lib/keyword-stats";
+import { cn } from "@/lib/utils";
 
 const CHART_WIDTH = 1000;
 const CHART_HEIGHT = 250;
 const PADDING = { top: 24, right: 16, bottom: 32, left: 40 };
+const TEMP_PADDING_RIGHT = 44;
 
 export function MovementGraph({
   timeline,
@@ -16,6 +18,10 @@ export function MovementGraph({
   stats: BaselineMovementStats;
 }) {
   const [hover, setHover] = useState<number | null>(null);
+  const [showTemperature, setShowTemperature] = useState(false);
+  const [temperatures, setTemperatures] = useState<Record<string, number>>({});
+  const [tempLoading, setTempLoading] = useState(false);
+  const [tempError, setTempError] = useState("");
 
   const points = useMemo(() => {
     if (timeline.length > 0) return timeline;
@@ -33,7 +39,46 @@ export function MovementGraph({
     ];
   }, [timeline, stats]);
 
-  const plotWidth = CHART_WIDTH - PADDING.left - PADDING.right;
+  const dateRange = useMemo(() => {
+    const dates = points.map((p) => p.date).sort();
+    return { start: dates[0], end: dates[dates.length - 1] };
+  }, [points]);
+
+  useEffect(() => {
+    if (!showTemperature) {
+      setTempError("");
+      return;
+    }
+
+    let cancelled = false;
+    setTempLoading(true);
+    setTempError("");
+
+    fetch(
+      `/api/weather/uk-temperature?start=${dateRange.start}&end=${dateRange.end}`,
+    )
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to load temperature");
+        if (!cancelled) setTemperatures(data.temperatures ?? {});
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setTemperatures({});
+          setTempError(err.message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setTempLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showTemperature, dateRange.start, dateRange.end]);
+
+  const rightPadding = showTemperature ? TEMP_PADDING_RIGHT : PADDING.right;
+  const plotWidth = CHART_WIDTH - PADDING.left - rightPadding;
   const plotHeight = CHART_HEIGHT - PADDING.top - PADDING.bottom;
 
   const nets = points.map((p) => p.net);
@@ -47,16 +92,53 @@ export function MovementGraph({
         ? PADDING.left + plotWidth / 2
         : PADDING.left + (index / (points.length - 1)) * plotWidth;
     const y =
-      PADDING.top +
-      ((yMax - point.net) / (yMax - yMin)) * plotHeight;
+      PADDING.top + ((yMax - point.net) / (yMax - yMin)) * plotHeight;
     return { ...point, x, y, index };
   });
 
   const linePath = coords.map((p) => `${p.x},${p.y}`).join(" ");
 
-  const yTicks = [yMax, 0, yMin].filter(
-    (v, i, arr) => arr.indexOf(v) === i,
-  );
+  const tempValues = points
+    .map((p) => temperatures[p.date])
+    .filter((v): v is number => v != null);
+
+  const hasTemperature = showTemperature && tempValues.length > 0;
+  const tempMin = hasTemperature ? Math.min(...tempValues) : 0;
+  const tempMax = hasTemperature ? Math.max(...tempValues) : 0;
+  const tempRange = tempMax - tempMin || 1;
+
+  const tempCoords = hasTemperature
+    ? coords
+        .map((point) => {
+          const temp = temperatures[point.date];
+          if (temp == null) return null;
+          return {
+            x: point.x,
+            y: PADDING.top + ((tempMax - temp) / tempRange) * plotHeight,
+            temp,
+            index: point.index,
+          };
+        })
+        .filter((p): p is NonNullable<typeof p> => p != null)
+    : [];
+
+  const tempLinePath = tempCoords.map((p) => `${p.x},${p.y}`).join(" ");
+  const tempPathD =
+    tempCoords.length > 0
+      ? `M${tempCoords.map((p) => `${p.x},${p.y}`).join(" L")}`
+      : "";
+  const tempAreaPath =
+    tempCoords.length > 0
+      ? `${tempPathD} L${tempCoords[tempCoords.length - 1].x},${PADDING.top + plotHeight} L${tempCoords[0].x},${PADDING.top + plotHeight} Z`
+      : "";
+
+  const tempTicks = hasTemperature
+    ? [tempMax, Math.round((tempMax + tempMin) / 2), tempMin].filter(
+        (v, i, arr) => arr.indexOf(v) === i,
+      )
+    : [];
+
+  const yTicks = [yMax, 0, yMin].filter((v, i, arr) => arr.indexOf(v) === i);
 
   const xLabels =
     points.length === 1
@@ -69,8 +151,29 @@ export function MovementGraph({
   return (
     <div className="border-b border-border pb-4 mb-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-[10px] uppercase tracking-wide text-muted">
-          Movement from baseline
+        <div className="flex items-center gap-3">
+          <div className="text-[10px] uppercase tracking-wide text-muted">
+            Movement from baseline
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowTemperature((on) => !on)}
+            className={cn(
+              "rounded border px-2 py-0.5 text-xs transition-colors",
+              showTemperature
+                ? "border-amber/50 bg-amber/10 text-amber"
+                : "border-border text-muted hover:text-foreground",
+            )}
+            aria-pressed={showTemperature}
+          >
+            UK temp
+          </button>
+          {showTemperature && tempLoading && (
+            <span className="text-xs text-muted">Loading…</span>
+          )}
+          {showTemperature && tempError && (
+            <span className="text-xs text-red">{tempError}</span>
+          )}
         </div>
         <div className="flex flex-wrap gap-4 text-xs">
           <span className="text-green tabular-nums">
@@ -82,6 +185,9 @@ export function MovementGraph({
           <span className="text-muted tabular-nums">
             — {stats.unchanged} unchanged
           </span>
+          {hasTemperature && (
+            <span className="text-amber tabular-nums">— UK mean temp (°C)</span>
+          )}
         </div>
       </div>
 
@@ -95,14 +201,13 @@ export function MovementGraph({
         >
           {yTicks.map((tick) => {
             const y =
-              PADDING.top +
-              ((yMax - tick) / (yMax - yMin)) * plotHeight;
+              PADDING.top + ((yMax - tick) / (yMax - yMin)) * plotHeight;
             return (
               <line
                 key={tick}
                 x1={PADDING.left}
                 y1={y}
-                x2={CHART_WIDTH - PADDING.right}
+                x2={CHART_WIDTH - rightPadding}
                 y2={y}
                 stroke="var(--border)"
                 strokeWidth={tick === 0 ? 1 : 0.5}
@@ -112,8 +217,7 @@ export function MovementGraph({
 
           {yTicks.map((tick) => {
             const y =
-              PADDING.top +
-              ((yMax - tick) / (yMax - yMin)) * plotHeight;
+              PADDING.top + ((yMax - tick) / (yMax - yMin)) * plotHeight;
             return (
               <text
                 key={`label-${tick}`}
@@ -127,6 +231,20 @@ export function MovementGraph({
               </text>
             );
           })}
+
+          {hasTemperature && tempAreaPath && (
+            <path d={tempAreaPath} fill="var(--amber)" opacity={0.08} />
+          )}
+
+          {hasTemperature && tempCoords.length > 1 && (
+            <polyline
+              fill="none"
+              stroke="var(--amber)"
+              strokeWidth={1.5}
+              points={tempLinePath}
+              opacity={0.75}
+            />
+          )}
 
           {points.length > 1 && (
             <polyline
@@ -150,6 +268,38 @@ export function MovementGraph({
               onMouseEnter={() => setHover(point.index)}
             />
           ))}
+
+          {hasTemperature &&
+            tempCoords.map((point) => (
+              <circle
+                key={`temp-${point.index}`}
+                cx={point.x}
+                cy={point.y}
+                r={hover === point.index ? 4 : 3}
+                fill="var(--amber)"
+                stroke="var(--background)"
+                strokeWidth={1.5}
+                onMouseEnter={() => setHover(point.index)}
+              />
+            ))}
+
+          {tempTicks.map((tick) => {
+            const y =
+              PADDING.top + ((tempMax - tick) / tempRange) * plotHeight;
+            return (
+              <text
+                key={`temp-${tick}`}
+                x={CHART_WIDTH - rightPadding + 8}
+                y={y + 4}
+                textAnchor="start"
+                fill="var(--amber)"
+                fontSize={10}
+                opacity={0.85}
+              >
+                {tick}°
+              </text>
+            );
+          })}
 
           {xLabels.map((label) => (
             <text
@@ -184,6 +334,11 @@ export function MovementGraph({
             </div>
             <div className="text-green tabular-nums">▲ {coords[hover].improved}</div>
             <div className="text-red tabular-nums">▼ {coords[hover].dropped}</div>
+            {showTemperature && temperatures[coords[hover].date] != null && (
+              <div className="mt-1 text-amber tabular-nums">
+                {temperatures[coords[hover].date]}°C UK mean
+              </div>
+            )}
           </div>
         )}
       </div>

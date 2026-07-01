@@ -11,7 +11,7 @@ export function ChangeCell({
 }) {
   if (checking) {
     return (
-      <span className="inline-flex items-center justify-center text-muted">
+      <span className="flex w-full items-center justify-center text-muted">
         <Spinner className="h-3.5 w-3.5" />
       </span>
     );
@@ -20,26 +20,25 @@ export function ChangeCell({
   const movement = getMovement(keyword);
 
   if (movement === null || movement === 0) {
-    return <span className="text-sm text-muted">—</span>;
-  }
-
-  if (movement > 0) {
     return (
-      <span className="inline-flex items-center gap-0.5 text-sm tabular-nums text-green">
-        <span className="text-[9px] leading-none" aria-hidden>
-          ▲
-        </span>
-        +{movement}
+      <span className="flex w-full items-center justify-center text-sm text-muted">
+        —
       </span>
     );
   }
 
+  const colorClass = movement > 0 ? "text-green" : "text-red";
+  const label = movement > 0 ? `+${movement}` : String(movement);
+
   return (
-    <span className="inline-flex items-center gap-0.5 text-sm tabular-nums text-red">
-      <span className="text-[9px] leading-none" aria-hidden>
-        ▼
+    <span className={`flex w-full items-center ${colorClass}`}>
+      <span className="flex flex-1 justify-end pr-0.5">
+        <span className="text-[10px] leading-none" aria-hidden>
+          {movement > 0 ? "▲" : "▼"}
+        </span>
       </span>
-      {movement}
+      <span className="shrink-0 text-xs tabular-nums">{label}</span>
+      <span className="flex-1" aria-hidden />
     </span>
   );
 }

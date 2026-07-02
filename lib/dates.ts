@@ -67,30 +67,62 @@ function addLondonCalendarDays(year: number, month: number, day: number, days: n
   return getLondonParts(new Date(anchor.getTime() + days * 86_400_000));
 }
 
-/** Next scheduled check at 00:01 UK time after `from`. */
+/** Day of week for a London calendar date. 0 = Sunday … 6 = Saturday. */
+function getLondonWeekday(year: number, month: number, day: number): number {
+  // Noon London never crosses a date boundary in UTC, so getUTCDay is safe here.
+  return londonInstant(year, month, day, 12, 0).getUTCDay();
+}
+
+/**
+ * Next scheduled check at 00:01 UK time, anchored uniformly so every keyword of
+ * a given frequency lands on the same slot regardless of when it was added:
+ *   - daily   → the next day
+ *   - weekly  → the next Monday
+ *   - monthly → the 1st of the next month
+ */
 export function getNextCheckAt(from: Date, frequency: Frequency): Date {
   const { year, month, day } = getLondonParts(from);
-  const increment = frequency === "daily" ? 1 : frequency === "weekly" ? 7 : 30;
-  const next = addLondonCalendarDays(year, month, day, increment);
-  let candidate = londonInstant(
-    next.year,
-    next.month,
-    next.day,
-    CHECK_HOUR,
-    CHECK_MINUTE,
-  );
 
-  if (candidate.getTime() <= from.getTime()) {
-    const later = addLondonCalendarDays(next.year, next.month, next.day, increment);
-    candidate = londonInstant(
-      later.year,
-      later.month,
-      later.day,
-      CHECK_HOUR,
-      CHECK_MINUTE,
-    );
+  const at = (y: number, m: number, d: number) =>
+    londonInstant(y, m, d, CHECK_HOUR, CHECK_MINUTE);
+
+  if (frequency === "monthly") {
+    let y = year;
+    let m = month + 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+    let candidate = at(y, m, 1);
+    if (candidate.getTime() <= from.getTime()) {
+      m += 1;
+      if (m > 12) {
+        m = 1;
+        y += 1;
+      }
+      candidate = at(y, m, 1);
+    }
+    return candidate;
   }
 
+  if (frequency === "weekly") {
+    const weekday = getLondonWeekday(year, month, day); // 0 = Sun … 6 = Sat
+    const daysUntilMonday = (1 - weekday + 7) % 7; // Monday = 1
+    let target = addLondonCalendarDays(year, month, day, daysUntilMonday);
+    let candidate = at(target.year, target.month, target.day);
+    if (candidate.getTime() <= from.getTime()) {
+      target = addLondonCalendarDays(target.year, target.month, target.day, 7);
+      candidate = at(target.year, target.month, target.day);
+    }
+    return candidate;
+  }
+
+  const next = addLondonCalendarDays(year, month, day, 1);
+  let candidate = at(next.year, next.month, next.day);
+  if (candidate.getTime() <= from.getTime()) {
+    const later = addLondonCalendarDays(next.year, next.month, next.day, 1);
+    candidate = at(later.year, later.month, later.day);
+  }
   return candidate;
 }
 

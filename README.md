@@ -52,7 +52,13 @@ Google Ads credentials live **only** on the `br-gads-api` server (mcp-hub). Bett
 
 ### Ranking check schedule
 
-Each keyword’s **Freq** setting (daily / weekly / monthly) controls when it becomes due (next check scheduled at **00:01 UK time**). The ranking cron runs **hourly** (`1 * * * *`) purely as a poller: each run processes a small batch of keywords whose `nextCheckAt` has passed. Hourly cadence is required for throughput — each Serprobot check takes ~30s and the serverless function is capped at 300s (~8 checks/run), so hourly runs clear the daily backlog through the morning. It does **not** cause keywords to be checked more often than their Freq, since `nextCheckAt` gates each keyword.
+Each keyword’s **Freq** setting controls its next check, anchored uniformly at **00:01 UK time** regardless of when the keyword was added:
+
+- **daily** → the next day
+- **weekly** → the next **Monday**
+- **monthly** → the **1st** of the next month
+
+The ranking cron runs **hourly** (`1 * * * *`) purely as a poller: each run processes a small batch of keywords whose `nextCheckAt` has passed. Hourly cadence is required for throughput — each Serprobot check takes ~30s and the serverless function is capped at 300s (~8 checks/run), so hourly runs clear the backlog through the morning. It does **not** cause keywords to be checked more often than their Freq, since `nextCheckAt` gates each keyword.
 
 ### 3. Database
 

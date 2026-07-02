@@ -43,16 +43,26 @@ export function ProjectPageHeader({
 
     if (dueIds.length === 0) return;
 
+    // Mark all due keywords as checking upfront so every row shows a spinner.
     startChecking(dueIds);
     setRunningDue(true);
+
     try {
-      await fetch(`/api/projects/${projectId}/run-due-checks`, {
-        method: "POST",
-      });
+      for (const id of dueIds) {
+        try {
+          await fetch(`/api/keywords/${id}/check`, { method: "POST" });
+        } catch {
+          // If one check fails, clear its spinner and continue with the rest.
+        }
+        // Clear this row's spinner and refresh the page data as each check
+        // completes so positions appear row-by-row rather than all at once.
+        stopChecking([id]);
+        router.refresh();
+      }
     } finally {
+      // Safety net: clear any remaining spinners (e.g. if the loop is interrupted).
       stopChecking(dueIds);
       setRunningDue(false);
-      router.refresh();
     }
   }, [keywords, projectId, router, startChecking, stopChecking]);
 

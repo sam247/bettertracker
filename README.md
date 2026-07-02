@@ -52,7 +52,7 @@ Google Ads credentials live **only** on the `br-gads-api` server (mcp-hub). Bett
 
 ### Ranking check schedule
 
-Each keyword’s **Freq** setting (daily / weekly / monthly) controls when it becomes due. The cron is only a daily poller — it runs keywords whose `nextCheckAt` has passed, scheduled at **00:01 UK time** after each check.
+Each keyword’s **Freq** setting (daily / weekly / monthly) controls when it becomes due (next check scheduled at **00:01 UK time**). The ranking cron runs **hourly** (`1 * * * *`) purely as a poller: each run processes a small batch of keywords whose `nextCheckAt` has passed. Hourly cadence is required for throughput — each Serprobot check takes ~30s and the serverless function is capped at 300s (~8 checks/run), so hourly runs clear the daily backlog through the morning. It does **not** cause keywords to be checked more often than their Freq, since `nextCheckAt` gates each keyword.
 
 ### 3. Database
 
@@ -80,7 +80,7 @@ Sign in with `sampettiford@googlemail.com` and your `AUTH_PASSWORD`.
 1. Push to GitHub and import the repo in Vercel.
 2. Add the **Vercel Postgres** integration (sets `DATABASE_URL`).
 3. Add all other env vars from `.env.example`.
-4. Deploy — `vercel.json` configures a daily ranking cron at 00:01 UTC and a monthly volume cron on the 1st.
+4. Deploy — `vercel.json` configures an hourly ranking poller cron and a monthly volume cron on the 1st.
 5. Run `npm run db:push` against production `DATABASE_URL` once to create tables.
 
 ## Usage
@@ -90,7 +90,7 @@ Sign in with `sampettiford@googlemail.com` and your `AUTH_PASSWORD`.
 3. **Monitor rankings** — position, movement, best, ranking URL, and cached search volume.
 4. **Search volume** — cached from Google Ads via `br-gads-api`; refreshes when missing or older than 60 days. Use **Refresh stale volumes** for a manual server-side refresh.
 5. **Manual check** — click "Check" on any row to run an immediate Serprobot check (1 credit).
-6. **Automated checks** — daily cron picks up due rankings (per keyword frequency); monthly cron for stale search volumes.
+6. **Automated checks** — hourly cron poller picks up due rankings (per keyword frequency); monthly cron for stale search volumes.
 
 ## API credits
 

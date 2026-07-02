@@ -2,8 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-/** Ranking cron runs at 00:01 UTC; refresh credits shortly after. */
-const POST_CRON_REFRESH_HOUR_UTC = 0;
+/** Ranking cron runs at :01 each hour; refresh shortly after so credits reflect new usage. */
 const POST_CRON_REFRESH_MINUTE_UTC = 3;
 
 export function msUntilNextPostCronRefresh(): number {
@@ -11,9 +10,8 @@ export function msUntilNextPostCronRefresh(): number {
   const next = new Date();
   next.setUTCSeconds(0, 0);
   next.setUTCMinutes(POST_CRON_REFRESH_MINUTE_UTC, 0, 0);
-  next.setUTCHours(POST_CRON_REFRESH_HOUR_UTC, POST_CRON_REFRESH_MINUTE_UTC, 0, 0);
   if (next.getTime() <= now) {
-    next.setUTCDate(next.getUTCDate() + 1);
+    next.setUTCHours(next.getUTCHours() + 1);
   }
   return next.getTime() - now;
 }

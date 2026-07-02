@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useChecking } from "@/components/checking-context";
 import { BulkActionsDialog } from "@/components/bulk-actions-dialog";
@@ -88,7 +88,6 @@ export function KeywordsTable({
     direction: "desc",
   });
   const { isChecking, startChecking, stopChecking } = useChecking();
-  const [, startRefresh] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detailId, setDetailId] = useState<string | null>(null);
   const detailRow = detailId
@@ -121,9 +120,7 @@ export function KeywordsTable({
         });
       } finally {
         stopChecking(ids);
-        startRefresh(() => {
-          router.refresh();
-        });
+        router.refresh();
       }
     }
 
@@ -273,9 +270,7 @@ export function KeywordsTable({
       await fetch(`/api/keywords/${id}/check`, { method: "POST" });
     } finally {
       stopChecking([id]);
-      startRefresh(() => {
-        router.refresh();
-      });
+      router.refresh();
     }
   }
 

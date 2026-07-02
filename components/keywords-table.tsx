@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useChecking } from "@/components/checking-context";
 import { BulkActionsDialog } from "@/components/bulk-actions-dialog";
+import { VolumeCheckerDialog } from "@/components/volume-checker-dialog";
 import { ChangeCell } from "@/components/change-cell";
 import { FrequencyBadge } from "@/components/frequency-badge";
 import { KeywordDetailPanel } from "@/components/keyword-detail-panel";
@@ -68,6 +69,7 @@ export function KeywordsTable({
   positionHistory,
   baselinePositions,
   movementTimeline,
+  volumesEnabled = false,
 }: {
   projectId: string;
   rows: KeywordRow[];
@@ -75,6 +77,7 @@ export function KeywordsTable({
   positionHistory: Record<string, (number | null)[]>;
   baselinePositions: Record<string, number | null>;
   movementTimeline: MovementTimelinePoint[];
+  volumesEnabled?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -302,6 +305,11 @@ export function KeywordsTable({
               onOpenChange={setBulkAddOpen}
             />
           </div>
+          {volumesEnabled && (
+            <div className="shrink-0">
+              <VolumeCheckerDialog projectId={projectId} />
+            </div>
+          )}
         </div>
         <div className="flex shrink-0 gap-1">
           <button

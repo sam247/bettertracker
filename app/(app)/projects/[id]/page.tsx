@@ -140,6 +140,7 @@ export default async function ProjectPage({
           positionHistory={positionHistory}
           baselinePositions={baselinePositions}
           movementTimeline={movementTimeline}
+          volumesEnabled={isGadsMcpConfigured()}
         />
       </Suspense>
     </CheckingProvider>

@@ -113,12 +113,7 @@ export function VolumeCheckerDialog({
 
   return (
     <>
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        onClick={() => setOpen(true)}
-      >
+      <Button type="button" onClick={() => setOpen(true)}>
         Check volumes
       </Button>
 

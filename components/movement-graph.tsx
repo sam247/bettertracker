@@ -5,6 +5,22 @@ import type { MovementTimelinePoint } from "@/lib/keyword-history";
 import type { BaselineMovementStats } from "@/lib/keyword-stats";
 import { cn } from "@/lib/utils";
 
+type DateRange = "7d" | "1m" | "3m" | "6m";
+
+const DATE_RANGE_OPTIONS: { value: DateRange; label: string; days: number }[] = [
+  { value: "7d", label: "7d", days: 7 },
+  { value: "1m", label: "1m", days: 30 },
+  { value: "3m", label: "3m", days: 90 },
+  { value: "6m", label: "6m", days: 180 },
+];
+
+function filterByRange(points: MovementTimelinePoint[], days: number): MovementTimelinePoint[] {
+  const cutoff = new Date();
+  cutoff.setUTCDate(cutoff.getUTCDate() - days);
+  const cutoffKey = cutoff.toISOString().slice(0, 10);
+  return points.filter((p) => p.date >= cutoffKey);
+}
+
 const CHART_WIDTH = 1000;
 const CHART_HEIGHT = 250;
 const PADDING = { top: 24, right: 16, bottom: 32, left: 40 };
@@ -22,14 +38,12 @@ export function MovementGraph({
   const [temperatures, setTemperatures] = useState<Record<string, number>>({});
   const [tempLoading, setTempLoading] = useState(false);
   const [tempError, setTempError] = useState("");
+  const [rangeKey, setRangeKey] = useState<DateRange>("1m");
 
   const points = useMemo(() => {
-    if (timeline.length > 0) return timeline;
-
-    const today = new Date().toISOString().slice(0, 10);
-    return [
+    const base = timeline.length > 0 ? timeline : [
       {
-        date: today,
+        date: new Date().toISOString().slice(0, 10),
         label: "Today",
         improved: stats.improved,
         dropped: stats.dropped,
@@ -37,7 +51,12 @@ export function MovementGraph({
         net: stats.improved - stats.dropped,
       },
     ];
-  }, [timeline, stats]);
+
+    const rangeDays = DATE_RANGE_OPTIONS.find((o) => o.value === rangeKey)?.days ?? 30;
+    const filtered = filterByRange(base, rangeDays);
+    // Always show at least one point so the chart renders.
+    return filtered.length > 0 ? filtered : base.slice(-1);
+  }, [timeline, stats, rangeKey]);
 
   const dateRange = useMemo(() => {
     const dates = points.map((p) => p.date).sort();
@@ -154,6 +173,23 @@ export function MovementGraph({
         <div className="flex items-center gap-3">
           <div className="text-[10px] uppercase tracking-wide text-muted">
             Movement from baseline
+          </div>
+          <div className="flex items-center gap-1">
+            {DATE_RANGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setRangeKey(opt.value)}
+                className={cn(
+                  "rounded px-2 py-0.5 text-xs transition-colors",
+                  rangeKey === opt.value
+                    ? "bg-surface-hover text-foreground"
+                    : "text-muted hover:text-foreground",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
           <button
             type="button"

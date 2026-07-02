@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useChecking } from "@/components/checking-context";
 import { BulkActionsDialog } from "@/components/bulk-actions-dialog";
@@ -85,6 +85,7 @@ export function KeywordsTable({
     direction: "desc",
   });
   const { isChecking, startChecking, stopChecking } = useChecking();
+  const [, startRefresh] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detailId, setDetailId] = useState<string | null>(null);
   const detailRow = detailId
@@ -115,9 +116,11 @@ export function KeywordsTable({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ids }),
         });
-        router.refresh();
       } finally {
         stopChecking(ids);
+        startRefresh(() => {
+          router.refresh();
+        });
       }
     }
 
@@ -265,9 +268,11 @@ export function KeywordsTable({
     startChecking([id]);
     try {
       await fetch(`/api/keywords/${id}/check`, { method: "POST" });
-      router.refresh();
     } finally {
       stopChecking([id]);
+      startRefresh(() => {
+        router.refresh();
+      });
     }
   }
 
@@ -448,7 +453,7 @@ export function KeywordsTable({
                   activeKey={sort.key}
                   direction={sort.direction}
                   onSort={handleSort}
-                  className="pr-4"
+                  className="w-16 pr-4"
                 />
                 <SortableTh
                   label="Last"
@@ -456,7 +461,7 @@ export function KeywordsTable({
                   activeKey={sort.key}
                   direction={sort.direction}
                   onSort={handleSort}
-                  className="pr-4"
+                  className="w-20 pr-4"
                 />
                 <th className="pb-2 pr-2 text-right font-medium text-muted">
                   Action
@@ -538,12 +543,12 @@ export function KeywordsTable({
                     <td className="py-2.5 pr-4 text-xs text-muted">
                       {group.name}
                     </td>
-                    <td className="py-2.5 pr-4">
+                    <td className="w-16 py-2.5 pr-4">
                       <FrequencyBadge frequency={keyword.frequency} />
                     </td>
                     <td
                       className={cn(
-                        "py-2.5 pr-4 text-xs",
+                        "w-20 py-2.5 pr-4 text-xs tabular-nums whitespace-nowrap",
                         due ? "text-amber" : "text-muted",
                       )}
                     >
